@@ -58,6 +58,7 @@ export hydw=${hydw:-''}
 export hyobfs=${hyobfs:-''}
 export hyobfspw=${hyobfspw:-''}
 export netopt=${netopt:-'yes'}
+export forceup=${forceup:-''}
 export port_vl_re=${vlpt:-''}
 export port_vm_ws=${vmpt:-''}
 export port_vw=${vwpt:-''}
@@ -246,17 +247,108 @@ case "$warp" in *s6*|x) sbyx='ipv6_only' ;; *) sbyx='prefer_ipv4' ;; esac
 case "$warp" in *x6*) xryx='ForceIPv6' ;; *x*) xryx='ForceIPv4v6' ;; *) xryx='ForceIPv6v4' ;; esac
 fi
 }
+corever(){
+# 读取内核版本号：corever <二进制路径> <x|s|c>，读取失败输出空
+[ -x "$1" ] || return 0
+case "$2" in
+x) "$1" version 2>/dev/null | awk '/^Xray/{print $2; exit}' ;;
+s) "$1" version 2>/dev/null | awk '$1=="sing-box"&&$2=="version"{print $3; exit}' ;;
+c) "$1" --version 2>/dev/null | awk 'NR==1{print $3; exit}' ;;
+esac
+}
+vercmp(){
+# 版本号比较：$1 更新回 1，$2 更新回 2，相同回 0（按点分段数值比较，忽略前导 v 与 -/+ 后缀）
+awk -v a="$1" -v b="$2" 'BEGIN{
+gsub(/^[vV]/,"",a); gsub(/^[vV]/,"",b);
+sub(/[-+].*$/,"",a); sub(/[-+].*$/,"",b);
+na=split(a,X,"."); nb=split(b,Y,".");
+n=(na>nb?na:nb);
+for(i=1;i<=n;i++){
+x=(i<=na?X[i]:0)+0; y=(i<=nb?Y[i]:0)+0;
+if(x>y){print 1; exit}
+if(x<y){print 2; exit}
+}
+print 0
+}'
+}
+upcore(){
+# 带新旧版本检查的内核升级：upcore <x|s|c> <下载地址> <显示名>
+# 结果：全局变量 coreupd=yes（已替换）| no（无变化）；返回 0 正常，1 失败
+local _t="$1" _u="$2" _n="$3" _bin _tmp _old _new _dn
+coreupd=no
+case "$_t" in
+x) _bin="$HOME/agsbx/xray"; _dn="upx" ;;
+s) _bin="$HOME/agsbx/sing-box"; _dn="ups" ;;
+c) _bin="$HOME/agsbx/cloudflared"; _dn="upa" ;;
+*) echo "未知内核类型：$_t"; return 1 ;;
+esac
+_tmp="${_bin}.new"
+_old=$(corever "$_bin" "$_t")
+if [ -n "$_old" ]; then
+echo "当前${_n}内核版本：v$_old"
+else
+echo "当前${_n}内核版本：未安装（将全新安装）"
+fi
+rm -f "$_tmp"
+echo "${_n}最新内核下载中，请稍候……"
+if command -v curl >/dev/null 2>&1; then
+curl -fLo "$_tmp" -# --retry 2 --connect-timeout 15 --max-time 900 "$_u" >/dev/null 2>&1
+elif command -v wget >/dev/null 2>&1; then
+timeout 900 wget -O "$_tmp" --tries=2 "$_u" >/dev/null 2>&1
+fi
+if [ ! -s "$_tmp" ]; then
+rm -f "$_tmp"
+echo "❌ ${_n}内核下载失败（域名不可达或下载地址失效），已保留现有内核，服务未受影响"
+return 1
+fi
+chmod +x "$_tmp" 2>/dev/null
+_new=$(corever "$_tmp" "$_t")
+if [ -z "$_new" ]; then
+rm -f "$_tmp"
+echo "❌ 下载的文件无法执行或版本号解析失败（下载不完整 / 架构不匹配：当前平台 ${cpu}），已保留现有内核"
+return 1
+fi
+echo "获取到最新${_n}内核版本：v$_new"
+if [ -n "$_old" ]; then
+case "$(vercmp "$_new" "$_old")" in
+0)
+echo "✅ 新旧版本一致（v${_old}），已是最新，跳过替换内核"
+rm -f "$_tmp"
+return 0
+;;
+1)
+echo "🔼 版本检查通过：v$_old → v${_new}（升级）"
+;;
+2)
+echo "🔽 版本检查未通过：v$_old → v${_new}（检测到版本回退）"
+if [ "$forceup" != "yes" ]; then
+echo "已按安全策略取消安装：新版本比当前版本更旧，可能是上游回滚或下载到异常文件，现有内核保持不变"
+echo "如确认要强制回退，请执行：forceup=yes $(basename "$0") $_dn"
+rm -f "$_tmp"
+return 1
+fi
+echo "forceup=yes，继续按回退方式替换内核"
+;;
+esac
+fi
+if [ -x "$_bin" ]; then
+cp -f "$_bin" "${_bin}.bak" 2>/dev/null
+fi
+mv -f "$_tmp" "$_bin" 2>/dev/null || cp -f "$_tmp" "$_bin"
+rm -f "$_tmp"
+chmod +x "$_bin" 2>/dev/null
+_new=$(corever "$_bin" "$_t")
+coreupd=yes
+echo "已安装${_n}内核：v${_new}（旧内核已备份为 ${_bin}.bak）"
+return 0
+}
 upxray(){
-url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/xray-$cpu"; out="$HOME/agsbx/xray"; (command -v curl >/dev/null 2>&1 && curl -Lo "$out" -# --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -O "$out" --tries=2 "$url")
-chmod +x "$HOME/agsbx/xray"
-sbcore=$("$HOME/agsbx/xray" version 2>/dev/null | awk '/^Xray/{print $2}')
-echo "已安装Xray正式版内核：$sbcore"
+url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/xray-$cpu"
+upcore x "$url" Xray
 }
 upsingbox(){
-url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/sing-box-$cpu"; out="$HOME/agsbx/sing-box"; (command -v curl>/dev/null 2>&1 && curl -Lo "$out" -# --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -O "$out" --tries=2 "$url")
-chmod +x "$HOME/agsbx/sing-box"
-sbcore=$("$HOME/agsbx/sing-box" version 2>/dev/null | awk '/version/{print $NF}')
-echo "已安装Sing-box正式版内核：$sbcore"
+url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/sing-box-$cpu"
+upcore s "$url" Sing-box
 }
 insuuid(){
 if [ -z "$uuid" ] && [ ! -e "$HOME/agsbx/uuid" ]; then
@@ -310,7 +402,7 @@ fi
 if sysctl -p "$sysctlfile" >/dev/null 2>&1; then
 echo "已写入 $sysctlfile 并立即生效（rmem/wmem 32MB、BBR+fq、FastOpen 等）"
 else
-echo "已写入 $sysctlfile，部分参数受限（容器/LXC），将在重启后按内核支持生效"
+echo "已写入 ${sysctlfile}，部分参数受限（容器/LXC），将在重启后按内核支持生效"
 fi
 }
 # ---------- 配置备份 / 启动前校验 ----------
@@ -362,7 +454,7 @@ echo
 echo "=========启用xray内核========="
 mkdir -p "$HOME/agsbx/xrk"
 if [ ! -e "$HOME/agsbx/xray" ]; then
-upxray
+upxray || { echo "❌ Xray内核安装失败，已终止（请检查到 github.com 的网络后重试）"; exit 1; }
 fi
 cfgbak "$HOME/agsbx/xr.json"
 cat > "$HOME/agsbx/xr.json" <<EOF
@@ -713,7 +805,7 @@ installsb(){
 echo
 echo "=========启用Sing-box内核========="
 if [ ! -e "$HOME/agsbx/sing-box" ]; then
-upsingbox
+upsingbox || { echo "❌ Sing-box内核安装失败，已终止（请检查到 github.com 的网络后重试）"; exit 1; }
 fi
 cfgbak "$HOME/agsbx/sb.json"
 cat > "$HOME/agsbx/sb.json" <<EOF
@@ -974,7 +1066,7 @@ if [ -n "$hybw" ]; then
 echo "Hysteria2 Brutal 拥塞控制已启用：上行 ${hyup}Mbps / 下行 ${hydw}Mbps（客户端需填相同带宽才生效）"
 fi
 if [ -n "$hyobfs" ]; then
-echo "Hysteria2 已启用 salamander 混淆：$hyobfspw（客户端需填相同 obfs 密码）"
+echo "Hysteria2 已启用 salamander 混淆：${hyobfspw}（客户端需填相同 obfs 密码）"
 fi
 if [ -e "$HOME/agsbx/xr.json" ] && [ "$hyforce" != yes ]; then
 if [ -n "$hyobfsq" ] || [ -n "$hybwq" ]; then
@@ -1436,10 +1528,7 @@ if [ -n "$argo" ] && [ -n "$vmag" ]; then
 echo
 echo "=========启用Cloudflared-argo内核========="
 if [ ! -e "$HOME/agsbx/cloudflared" ]; then
-argocore=$({ command -v curl >/dev/null 2>&1 && curl -Ls https://data.jsdelivr.com/v1/package/gh/cloudflare/cloudflared || wget -qO- https://data.jsdelivr.com/v1/package/gh/cloudflare/cloudflared; } | grep -Eo '"[0-9.]+"' | sed -n 1p | tr -d '",')
-echo "下载Cloudflared-argo最新正式版内核：$argocore"
-url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu"; out="$HOME/agsbx/cloudflared"; (command -v curl>/dev/null 2>&1 && curl -Lo "$out" -# --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -O "$out" --tries=2 "$url")
-chmod +x "$HOME/agsbx/cloudflared"
+upcore c "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu" Cloudflared || { echo "❌ Cloudflared内核安装失败，已终止（argo 相关协议需要它）"; exit 1; }
 fi
 if [ "$argo" = "vmpt" ]; then argoport=$(cat "$HOME/agsbx/port_vm_ws" 2>/dev/null); echo "Vmess" > "$HOME/agsbx/vlvm"; elif [ "$argo" = "vwpt" ]; then argoport=$(cat "$HOME/agsbx/port_vw" 2>/dev/null); echo "Vless" > "$HOME/agsbx/vlvm"; fi; echo "$argoport" > "$HOME/agsbx/argoport.log"
 if [ -n "${ARGO_DOMAIN}" ] && [ -n "${ARGO_AUTH}" ]; then
@@ -1587,20 +1676,23 @@ fi
 }
 argosbxstatus(){
 echo "=========当前三大内核运行状态========="
+_sv=$(corever "$HOME/agsbx/sing-box" s)
+_xv=$(corever "$HOME/agsbx/xray" x)
+_cv=$(corever "$HOME/agsbx/cloudflared" c)
 if procunderhome s; then
-echo "Sing-box (版本V$("$HOME/agsbx/sing-box" version 2>/dev/null | awk '/version/{print $NF}'))：运行中"
+echo "Sing-box (版本V${_sv:-未知})：运行中"
 else
-echo "Sing-box：未启用"
+echo "Sing-box${_sv:+ (版本V$_sv)}：未启用"
 fi
 if procunderhome x; then
-echo "Xray (版本V$("$HOME/agsbx/xray" version 2>/dev/null | awk '/^Xray/{print $2}'))：运行中"
+echo "Xray (版本V${_xv:-未知})：运行中"
 else
-echo "Xray：未启用"
+echo "Xray${_xv:+ (版本V$_xv)}：未启用"
 fi
 if procunderhome c; then
-echo "Argo (版本V$("$HOME/agsbx/cloudflared" version 2>/dev/null | awk '{print $3}'))：运行中"
+echo "Argo (版本V${_cv:-未知})：运行中"
 else
-echo "Argo：未启用"
+echo "Argo${_cv:+ (版本V$_cv)}：未启用"
 fi
 }
 cip(){
@@ -2883,22 +2975,75 @@ cip
 lockfiles
 exit
 elif [ "$1" = "upx" ]; then
-for P in /proc/[0-9]*; do [ -L "$P/exe" ] || continue; TARGET=$(readlink -f "$P/exe" 2>/dev/null) || continue; case "$TARGET" in *"/agsbx/x"*) kill "$(basename "$P")" 2>/dev/null ;; esac; done
-killhome x
-upxray && xrestart && echo "Xray内核更新完成" && sleep 2 && cip
+upcore x "https://github.com/yonggekkk/argosbx/releases/download/argosbx/xray-$cpu" Xray || exit
+if [ "$coreupd" != "yes" ]; then
+echo "Xray内核未做替换，服务保持原样运行" && sleep 2 && cip
+exit
+fi
+if [ ! -s "$HOME/agsbx/xr.json" ]; then
+echo "Xray内核已就位，但本机没有 Xray 协议配置，跳过重启" && sleep 2 && cip
+exit
+fi
+xrestart
+sleep 3
+if procunderhome x; then
+echo "Xray内核更新完成，当前版本：v$(corever "$HOME/agsbx/xray" x)"
+else
+echo "❌ 新内核未能启动，自动回滚旧内核……"
+[ -x "$HOME/agsbx/xray.bak" ] && mv -f "$HOME/agsbx/xray.bak" "$HOME/agsbx/xray" && chmod +x "$HOME/agsbx/xray"
+xrestart
+sleep 3
+if procunderhome x; then
+echo "已回滚到旧内核并恢复运行：v$(corever "$HOME/agsbx/xray" x)"
+else
+echo "⚠️ 回滚后仍未启动，请检查：journalctl -u xr -n 50"
+echo "   手动排查：$HOME/agsbx/xray run -c $HOME/agsbx/xr.json"
+fi
+fi
+sleep 2 && cip
 exit
 elif [ "$1" = "ups" ]; then
-for P in /proc/[0-9]*; do [ -L "$P/exe" ] || continue; TARGET=$(readlink -f "$P/exe" 2>/dev/null) || continue; case "$TARGET" in *"/agsbx/s"*) kill "$(basename "$P")" 2>/dev/null ;; esac; done
-killhome s
-upsingbox && sbrestart && echo "Sing-box内核更新完成" && sleep 2 && cip
+upcore s "https://github.com/yonggekkk/argosbx/releases/download/argosbx/sing-box-$cpu" Sing-box || exit
+if [ "$coreupd" != "yes" ]; then
+echo "Sing-box内核未做替换，服务保持原样运行" && sleep 2 && cip
+exit
+fi
+if [ ! -s "$HOME/agsbx/sb.json" ]; then
+echo "Sing-box内核已就位，但本机没有 Sing-box 协议配置，跳过重启" && sleep 2 && cip
+exit
+fi
+sbroll=no
+if [ -s "$HOME/agsbx/sb.json" ] && ! "$HOME/agsbx/sing-box" check -c "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
+echo "⚠️ 新内核与本机现有配置不兼容（sing-box check 未通过），先回滚旧内核"
+[ -x "$HOME/agsbx/sing-box.bak" ] && mv -f "$HOME/agsbx/sing-box.bak" "$HOME/agsbx/sing-box" && chmod +x "$HOME/agsbx/sing-box"
+sbroll=yes
+fi
+sbrestart
+sleep 3
+if [ "$sbroll" = yes ] && procunderhome s; then
+echo "已回滚到旧内核并恢复运行：v$(corever "$HOME/agsbx/sing-box" s)（新内核与现有配置不兼容，可先用 agsbx rep 重建配置再升级）"
+elif procunderhome s; then
+echo "Sing-box内核更新完成，当前版本：v$(corever "$HOME/agsbx/sing-box" s)"
+else
+echo "❌ 新内核未能启动，自动回滚旧内核……"
+[ -x "$HOME/agsbx/sing-box.bak" ] && mv -f "$HOME/agsbx/sing-box.bak" "$HOME/agsbx/sing-box" && chmod +x "$HOME/agsbx/sing-box"
+sbrestart
+sleep 3
+if procunderhome s; then
+echo "已回滚到旧内核并恢复运行：v$(corever "$HOME/agsbx/sing-box" s)"
+else
+echo "⚠️ 回滚后仍未启动，请检查：journalctl -u sb -n 50"
+echo "   手动排查：$HOME/agsbx/sing-box run -c $HOME/agsbx/sb.json"
+fi
+fi
+sleep 2 && cip
 exit
 elif [ "$1" = "upa" ]; then
-for P in /proc/[0-9]*; do [ -L "$P/exe" ] || continue; TARGET=$(readlink -f "$P/exe" 2>/dev/null) || continue; case "$TARGET" in *"/agsbx/c"*) kill "$(basename "$P")" 2>/dev/null ;; esac; done
-killhome c
-argocore=$({ command -v curl >/dev/null 2>&1 && curl -Ls https://data.jsdelivr.com/v1/package/gh/cloudflare/cloudflared || wget -qO- https://data.jsdelivr.com/v1/package/gh/cloudflare/cloudflared; } | grep -Eo '"[0-9.]+"' | sed -n 1p | tr -d '",')
-echo "下载Cloudflared-argo最新正式版内核：$argocore"
-url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu"; out="$HOME/agsbx/cloudflared"; (command -v curl>/dev/null 2>&1 && curl -Lo "$out" -# --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -O "$out" --tries=2 "$url")
-chmod +x "$HOME/agsbx/cloudflared"
+upcore c "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu" Cloudflared || exit
+if [ "$coreupd" != "yes" ]; then
+echo "Cloudflared内核未做替换，服务保持原样运行" && sleep 2 && cip
+exit
+fi
 if [ -e "$HOME/agsbx/sbargotoken.log" ]; then
 if pidof systemd >/dev/null 2>&1; then
 systemctl restart argo >/dev/null 2>&1
@@ -2910,7 +3055,7 @@ fi
 else
 nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log 2>/dev/null) --edge-ip-version auto --no-autoupdate --protocol http2 > $HOME/agsbx/argo.log 2>&1 &
 fi
-echo "Cloudflared-argo内核更新完成" && sleep 2 && cip
+echo "Cloudflared-argo内核更新完成，当前版本：v$(corever "$HOME/agsbx/cloudflared" c)" && sleep 2 && cip
 exit
 elif [ "$1" = "res" ]; then
 for P in /proc/[0-9]*; do
