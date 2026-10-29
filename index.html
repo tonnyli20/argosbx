@@ -387,7 +387,11 @@
           </svg>
         </label>
       </div>
-      <h1>ArgoSBX小钢炮脚本💣一键SSH命令生成器 V26.7.16</h1>
+      <h1>ArgoSBX小钢炮脚本💣一键SSH命令生成器 V26.7.16 · maint 维护版</h1>
+      <p style="border-left:3px solid #f59e0b;padding-left:10px;color:#f59e0b;">
+        本页为 <a href="https://github.com/tonnyli20/argosbx/tree/maint" target="_blank">tonnyli20/argosbx (maint)</a> 维护版专用生成器：命令指向 maint 脚本，新增 Brutal(hyup/hydw)、salamander 混淆(hyobfs/hyobfspw)、网络调优开关(netopt)。<br>
+        上游原版生成器：<a href="https://yonggekkk.github.io/argosbx/" target="_blank">yonggekkk.github.io/argosbx</a>（不含以上参数）
+      </p>
       <p>
         甬哥Github项目：
         <a href="https://github.com/yonggekkk" target="_blank">github.com/yonggekkk</a><br>
@@ -461,6 +465,12 @@
           </select>
         </div>
         <div class="row"><label>Hysteria2端口跳跃 <span class="pill">hyjpt</span></label><input id="hyjpt" type="text" placeholder="支持多个范围端口与单端口混用(空格间隔)，例：123:456 789" disabled/></div>
+        <div class="row"><label>网络内核调优 <span class="pill">netopt</span></label>
+          <select id="netopt">
+            <option value="">默认 开启（BBR+fq+缓冲区调优，net-tune.sh）</option>
+            <option value="no">关闭 跳过网络调优（netopt=no）</option>
+          </select>
+        </div>
         <div class="row"><label>CF解析IP的域名<span class="pill">cdnym</span></label><input id="cdnym" type="text" placeholder="Vmess-ws、Vless-xhttp/ws-enc启用80、回源CDN时可用" disabled/></div>
         <div class="row"><label>套WARP-IP出站 <span class="pill">warp</span></label>
           <select id="warp">
@@ -560,7 +570,8 @@
           <button id="reset">重置</button>
           <button id="copy">复制</button>
         </div>
-        <p style="margin-top: 10px;">相关细节说明，请参考ArgoSBX小钢炮脚本项目💣：<a href="https://github.com/yonggekkk/argosbx" target="_blank">github.com/yonggekkk/argosbx</a></p>
+        <p style="margin-top: 10px;">相关细节说明，请参考 ArgoSBX 维护版项目💣：<a href="https://github.com/tonnyli20/argosbx/tree/maint" target="_blank">github.com/tonnyli20/argosbx (maint)</a>；<br>
+        内核升级(upx/ups/upa)已内置新旧版本检查：同版本跳过、降级默认拒绝（确需降级在命令里加 <span class="pill">forceup=yes</span>）；网络调优回滚：<span class="pill">rm /etc/sysctl.d/99-agsbx-net.conf && sysctl --system</span></p>
 Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/acme-yg/main/acme.sh)</a></p>
 1、ArgoSBX一键SSH命令生成器发布，只要点几下，各大代理协议任你选：<a href="https://youtu.be/4u6W4c-t3oU" target="_blank">点击视频教程</a></p>
 2、ArgoSBX内置15种WARP出站组合，轻松替代独立的WARP脚本：<a href="https://youtu.be/iywjT8fIka4" target="_blank">点击视频教程</a></p>
@@ -581,7 +592,7 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
   const CURL = 'bash <(curl -Ls https://raw.githubusercontent.com/tonnyli20/argosbx/maint/argosbx.sh)';
   const WGET = 'bash <(wget -qO- https://raw.githubusercontent.com/tonnyli20/argosbx/maint/argosbx.sh)';
   const protoKeys = ['sopt','vmpt','vlpt','xhpt','vxpt','vwpt','xupt','xcpt','hypt','tupt','nvpt','anpt','arpt','sspt'];
-  const optIds = ['warp','ippz','uuid','reym','cfip','alns','hyjpt','cdnym','name', 'oap', 'sub', 'subid', 'subpt', 'hyup', 'hydw', 'hyobfs', 'hyobfspw'];
+  const optIds = ['warp','ippz','uuid','reym','cfip','alns','hyjpt','cdnym','name', 'oap', 'sub', 'subid', 'subpt', 'hyup', 'hydw', 'hyobfs', 'hyobfspw', 'netopt'];
 
   const argoSelect = document.getElementById('argoSelect');
   const agn = document.getElementById('agn');
@@ -819,7 +830,7 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
     const keys = Object.keys(m);
     const ordered = [];
     protoKeys.forEach(k => { if (keys.includes(k)) ordered.push(k); });
-    ['warp', 'uuid', 'reym', 'cfip', 'alns', 'hyjpt', 'hyup', 'hydw', 'hyobfs', 'hyobfspw', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
+    ['warp', 'uuid', 'reym', 'cfip', 'alns', 'hyjpt', 'hyup', 'hydw', 'hyobfs', 'hyobfspw', 'netopt', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
     if (keys.includes('argo')) ordered.push('argo');
     if (keys.includes('agn')) ordered.push('agn');
     if (keys.includes('agk')) ordered.push('agk');
