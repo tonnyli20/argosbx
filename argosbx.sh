@@ -1,10 +1,29 @@
 #!/bin/bash
 export LANG=en_US.UTF-8
 mkdir -p "$HOME/agsbx"
-url='https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh'
+procunderhome(){
+local pat p e
+pat="${1:-s|x|c}"
+for p in $(pgrep -f "agsbx/($pat)" 2>/dev/null); do
+e=$(readlink -f "/proc/$p/exe" 2>/dev/null)
+case "$e" in "$HOME/agsbx/"*) return 0 ;; esac
+done
+return 1
+}
+killhome(){
+local pat p e
+pat="${1:-s|x|c}"
+for p in $(pgrep -f "agsbx/($pat)" 2>/dev/null); do
+e=$(readlink -f "/proc/$p/exe" 2>/dev/null)
+case "$e" in "$HOME/agsbx/"*) kill -15 "$p" 2>/dev/null ;; esac
+done
+return 0
+}
+url="${AGSBX_SELF_URL:-https://raw.githubusercontent.com/tonnyli20/argosbx/maint/argosbx.sh}"
+selfurl="$url"
 case "${*##* }" in list|del|upx|ups|upa|res|tune) ;; *)
 cmd=""
-for v in uuid vlpt vmpt vwpt hypt tupt xhpt vxpt anpt arpt sspt sopt nvpt xupt xcpt reym cdnym argo agn agk warp name oap; do
+for v in uuid vlpt vmpt vwpt hypt tupt xhpt vxpt anpt arpt sspt sopt nvpt xupt xcpt reym cdnym argo agn agk warp name oap hyup hydw hyobfs hyobfspw netopt; do
 [ -n "${!v+x}" ] && cmd+="$v=\"${!v}\" "
 done
 main="bash <(curl -Ls $url)"
@@ -26,7 +45,7 @@ cmd+="$main${*:+ $*}"
 [ -z "${nvpt+x}" ] || nvp=yes
 [ -z "${xupt+x}" ] || xup=yes
 [ -z "${xcpt+x}" ] || xcp=yes
-if find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -Eq 'agsbx/(s|x)' || pgrep -f 'agsbx/(s|x)' >/dev/null 2>&1; then
+if procunderhome || [ -s "$HOME/agsbx/sb.json" ] || [ -s "$HOME/agsbx/xr.json" ]; then
 if [ "$1" = "rep" ]; then
 [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：rep重置协议时，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
 fi
@@ -36,6 +55,8 @@ fi
 export uuid=${uuid:-''}
 export hyup=${hyup:-''}
 export hydw=${hydw:-''}
+export hyobfs=${hyobfs:-''}
+export hyobfspw=${hyobfspw:-''}
 export netopt=${netopt:-'yes'}
 export port_vl_re=${vlpt:-''}
 export port_vm_ws=${vmpt:-''}
@@ -60,12 +81,58 @@ export ippz=${ippz:-''}
 export warp=${warp:-''}
 export name=${name:-''}
 export oap=${oap:-''}
+# ---------- 参数校验 / 端口分配 ----------
+validport(){ case "$1" in ''|*[!0-9]*) return 1;; esac; [ "$1" -ge 1 ] && [ "$1" -le 65535 ]; }
+for _pv in port_vl_re port_vm_ws port_vw port_hy2 port_tu port_xh port_vx port_an port_ar port_ss port_so port_nv port_xu port_xc; do
+eval "_pval=\${$_pv}"
+if [ -n "$_pval" ] && ! validport "$_pval"; then
+echo "提示：$_pv=\"$_pval\" 不是合法端口（1-65535），本次改用随机端口"
+eval "$_pv=''"
+fi
+done
+for _bw in hyup hydw; do
+eval "_bval=\${$_bw}"
+if [ -n "$_bval" ] && { case "$_bval" in *[!0-9]*) true;; *) false;; esac || [ "$_bval" -lt 1 ] || [ "$_bval" -gt 100000 ]; }; then
+echo "提示：$_bw=\"$_bval\" 不是合法带宽（1-100000 Mbps），已忽略"
+eval "$_bw=''"
+fi
+done
+if [ -n "$uuid" ] && ! printf '%s' "$uuid" | grep -Eq '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'; then
+echo "提示：uuid=\"$uuid\" 不是标准 UUID 格式（vless/vmess 必需），本次改用随机 UUID"
+uuid=''
+fi
+if [ -n "$hyobfspw" ] && printf '%s' "$hyobfspw" | grep -q '[^0-9A-Za-z]'; then
+echo "提示：hyobfspw 建议只用字母数字（避免分享链接需转义），已保留原值"
+fi
+portbusy(){
+if command -v ss >/dev/null 2>&1; then
+ss -lntu 2>/dev/null | awk 'NR>1{print $5}' | grep -qE "[:.]$1\$"
+elif command -v netstat >/dev/null 2>&1; then
+netstat -lntu 2>/dev/null | awk 'NR>2{print $4}' | grep -qE "[:.]$1\$"
+else
+return 1
+fi
+}
+usedports=""
+randport(){
+local p n=0
+while [ "$n" -lt 60 ]; do
+# 10000-29999：避开 32768+ 的内核临时端口段，减少 bind 失败
+p=$(( (RANDOM % 20000) + 10000 ))
+n=$((n+1))
+case " $usedports " in *" $p "*) continue ;; esac
+portbusy "$p" && continue
+usedports="$usedports $p"
+echo "$p"; return 0
+done
+echo "$p"
+}
 v46url="https://icanhazip.com"
-agsbxurl="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
+agsbxurl="$selfurl"
 showmode(){
 [ -s "$HOME/agsbx/sh.txt" ] && echo "上次输入的完整脚本：$(cat "$HOME/agsbx/sh.txt")"
 echo "Argosbx脚本一键SSH命令生器在线网址：https://yonggekkk.github.io/argosbx/"
-echo "主脚本：bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh) 或 bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh)"
+echo "主脚本：bash <(curl -Ls $selfurl) 或 bash <(wget -qO- $selfurl)"
 echo "显示节点信息命令：agsbx list 【或者】 主脚本 list"
 echo "重置变量组命令：自定义各种协议变量组 agsbx rep 【或者】 自定义各种协议变量组 主脚本 rep"
 echo "更新脚本命令：原已安装的自定义各种协议变量组 主脚本 rep"
@@ -246,6 +313,50 @@ else
 echo "已写入 $sysctlfile，部分参数受限（容器/LXC），将在重启后按内核支持生效"
 fi
 }
+# ---------- 配置备份 / 启动前校验 ----------
+cfgbak(){ [ -s "$1" ] && cp -f "$1" "$1.bak"; }
+xrcheck(){
+[ -s "$HOME/agsbx/xr.json" ] || return 1
+[ -x "$HOME/agsbx/xray" ] || return 0
+sed -i '${s/,[[:space:]]*$//}' "$HOME/agsbx/xr.json" 2>/dev/null
+"$HOME/agsbx/xray" run -test -c "$HOME/agsbx/xr.json" >/dev/null 2>&1 || "$HOME/agsbx/xray" -test -c "$HOME/agsbx/xr.json" >/dev/null 2>&1
+}
+sbcheck(){
+[ -s "$HOME/agsbx/sb.json" ] || return 1
+[ -x "$HOME/agsbx/sing-box" ] || return 0
+sed -i '${s/,[[:space:]]*$//}' "$HOME/agsbx/sb.json" 2>/dev/null
+"$HOME/agsbx/sing-box" check -c "$HOME/agsbx/sb.json" >/dev/null 2>&1 || "$HOME/agsbx/sing-box" -c "$HOME/agsbx/sb.json" check >/dev/null 2>&1
+}
+cfgrollback(){
+if [ -s "$1.bak" ]; then
+cp -f "$1.bak" "$1"
+echo "已回滚到上一次可用配置：$1（旧配置备份 $1.bak 保留）"
+else
+echo "无历史备份可回滚，请检查上方报错后重跑脚本（常见原因：端口被占用、证书路径不存在）"
+fi
+}
+# 只清理本脚本自己添加的 hysteria2 跳跃端口规则，不动 ufw/docker/其他 DNAT
+hy2natclean(){
+for _fam in iptables ip6tables; do
+command -v "$_fam" >/dev/null 2>&1 || continue
+"$_fam" -t nat -S PREROUTING 2>/dev/null | grep 'agsbx-hy2-jump' | sed 's/^-A /-D /' | while read -r _rule; do
+"$_fam" -t nat $_rule >/dev/null 2>&1
+done
+done
+}
+validhyjpt(){
+for _hp in $1; do
+printf '%s' "$_hp" | grep -Eq '^[0-9]{1,5}(:[0-9]{1,5})?$' || return 1
+done
+}
+lockfiles(){
+[ -d "$HOME/agsbx" ] || return 0
+for _f in sb.json xr.json sbox.json uuid sh.txt sbargotoken.log obfs_pw argo.env SHA256.txt; do
+[ -f "$HOME/agsbx/$_f" ] && chmod 600 "$HOME/agsbx/$_f" 2>/dev/null
+done
+[ -f "$HOME/agsbx/private.key" ] && chmod 600 "$HOME/agsbx/private.key" 2>/dev/null
+return 0
+}
 installxray(){
 echo
 echo "=========启用xray内核========="
@@ -253,6 +364,7 @@ mkdir -p "$HOME/agsbx/xrk"
 if [ ! -e "$HOME/agsbx/xray" ]; then
 upxray
 fi
+cfgbak "$HOME/agsbx/xr.json"
 cat > "$HOME/agsbx/xr.json" <<EOF
 {
   "log": {
@@ -295,7 +407,7 @@ fi
 if [ -n "$xhp" ]; then
 xhp=xhpt
 if [ -z "$port_xh" ] && [ ! -e "$HOME/agsbx/port_xh" ]; then
-port_xh=$(shuf -i 10000-65535 -n 1)
+port_xh=$(randport)
 echo "$port_xh" > "$HOME/agsbx/port_xh"
 elif [ -n "$port_xh" ]; then
 echo "$port_xh" > "$HOME/agsbx/port_xh"
@@ -348,7 +460,7 @@ fi
 if [ -n "$vxp" ]; then
 vxp=vxpt
 if [ -z "$port_vx" ] && [ ! -e "$HOME/agsbx/port_vx" ]; then
-port_vx=$(shuf -i 10000-65535 -n 1)
+port_vx=$(randport)
 echo "$port_vx" > "$HOME/agsbx/port_vx"
 elif [ -n "$port_vx" ]; then
 echo "$port_vx" > "$HOME/agsbx/port_vx"
@@ -395,7 +507,7 @@ fi
 if [ -n "$xup" ]; then
 xup=xupt
 if [ -z "$port_xu" ] && [ ! -e "$HOME/agsbx/port_xu" ]; then
-port_xu=$(shuf -i 10000-65535 -n 1)
+port_xu=$(randport)
 echo "$port_xu" > "$HOME/agsbx/port_xu"
 elif [ -n "$port_xu" ]; then
 echo "$port_xu" > "$HOME/agsbx/port_xu"
@@ -450,7 +562,7 @@ fi
 if [ -n "$xcp" ]; then
 xcp=xcpt
 if [ -z "$port_xc" ] && [ ! -e "$HOME/agsbx/port_xc" ]; then
-port_xc=$(shuf -i 10000-65535 -n 1)
+port_xc=$(randport)
 echo "$port_xc" > "$HOME/agsbx/port_xc"
 elif [ -n "$port_xc" ]; then
 echo "$port_xc" > "$HOME/agsbx/port_xc"
@@ -505,7 +617,7 @@ fi
 if [ -n "$vwp" ]; then
 vwp=vwpt
 if [ -z "$port_vw" ] && [ ! -e "$HOME/agsbx/port_vw" ]; then
-port_vw=$(shuf -i 10000-65535 -n 1)
+port_vw=$(randport)
 echo "$port_vw" > "$HOME/agsbx/port_vw"
 elif [ -n "$port_vw" ]; then
 echo "$port_vw" > "$HOME/agsbx/port_vw"
@@ -550,7 +662,7 @@ fi
 if [ -n "$vlp" ]; then
 vlp=vlpt
 if [ -z "$port_vl_re" ] && [ ! -e "$HOME/agsbx/port_vl_re" ]; then
-port_vl_re=$(shuf -i 10000-65535 -n 1)
+port_vl_re=$(randport)
 echo "$port_vl_re" > "$HOME/agsbx/port_vl_re"
 elif [ -n "$port_vl_re" ]; then
 echo "$port_vl_re" > "$HOME/agsbx/port_vl_re"
@@ -603,6 +715,7 @@ echo "=========启用Sing-box内核========="
 if [ ! -e "$HOME/agsbx/sing-box" ]; then
 upsingbox
 fi
+cfgbak "$HOME/agsbx/sb.json"
 cat > "$HOME/agsbx/sb.json" <<EOF
 {
 "log": {
@@ -616,7 +729,7 @@ insuuid
 if [ -s "/root/ygkkkca/private.key" ] && [ -n "$nvp" ]; then
 nvp=nvpt
 if [ -z "$port_nv" ] && [ ! -e "$HOME/agsbx/port_nv" ]; then
-port_nv=$(shuf -i 10000-65535 -n 1)
+port_nv=$(randport)
 echo "$port_nv" > "$HOME/agsbx/port_nv"
 elif [ -n "$port_nv" ]; then
 echo "$port_nv" > "$HOME/agsbx/port_nv"
@@ -649,7 +762,7 @@ fi
 if [ -n "$tup" ]; then
 tup=tupt
 if [ -z "$port_tu" ] && [ ! -e "$HOME/agsbx/port_tu" ]; then
-port_tu=$(shuf -i 10000-65535 -n 1)
+port_tu=$(randport)
 echo "$port_tu" > "$HOME/agsbx/port_tu"
 elif [ -n "$port_tu" ]; then
 echo "$port_tu" > "$HOME/agsbx/port_tu"
@@ -685,7 +798,7 @@ fi
 if [ -n "$anp" ]; then
 anp=anpt
 if [ -z "$port_an" ] && [ ! -e "$HOME/agsbx/port_an" ]; then
-port_an=$(shuf -i 10000-65535 -n 1)
+port_an=$(randport)
 echo "$port_an" > "$HOME/agsbx/port_an"
 elif [ -n "$port_an" ]; then
 echo "$port_an" > "$HOME/agsbx/port_an"
@@ -735,7 +848,7 @@ private_key_s=$(cat "$HOME/agsbx/sbk/private_key")
 public_key_s=$(cat "$HOME/agsbx/sbk/public_key")
 short_id_s=$(cat "$HOME/agsbx/sbk/short_id")
 if [ -z "$port_ar" ] && [ ! -e "$HOME/agsbx/port_ar" ]; then
-port_ar=$(shuf -i 10000-65535 -n 1)
+port_ar=$(randport)
 echo "$port_ar" > "$HOME/agsbx/port_ar"
 elif [ -n "$port_ar" ]; then
 echo "$port_ar" > "$HOME/agsbx/port_ar"
@@ -779,7 +892,7 @@ sskey=$("$HOME/agsbx/sing-box" generate rand 16 --base64)
 echo "$sskey" > "$HOME/agsbx/sskey"
 fi
 if [ -z "$port_ss" ] && [ ! -e "$HOME/agsbx/port_ss" ]; then
-port_ss=$(shuf -i 10000-65535 -n 1)
+port_ss=$(randport)
 echo "$port_ss" > "$HOME/agsbx/port_ss"
 elif [ -n "$port_ss" ]; then
 echo "$port_ss" > "$HOME/agsbx/port_ss"
@@ -806,7 +919,7 @@ xrsbhy2(){
 if [ -n "$hyp" ]; then
 hyp=hypt
 if [ -z "$port_hy2" ] && [ ! -e "$HOME/agsbx/port_hy2" ]; then
-port_hy2=$(shuf -i 10000-65535 -n 1)
+port_hy2=$(randport)
 echo "$port_hy2" > "$HOME/agsbx/port_hy2"
 elif [ -n "$port_hy2" ]; then
 echo "$port_hy2" > "$HOME/agsbx/port_hy2"
@@ -824,9 +937,50 @@ hybwy="  up: \"${hyup} Mbps\"
   down: \"${hydw} Mbps\"
 "
 hybwq="&upmbps=${hyup}&downmbps=${hydw}"
+fi
+hyobfsb=""
+hyobfsy=""
+hyobfsq=""
+if [ -n "$hyobfs" ]; then
+if [ -z "$hyobfspw" ]; then
+if [ -s "$HOME/agsbx/obfs_pw" ]; then
+hyobfspw=$(cat "$HOME/agsbx/obfs_pw")
+else
+hyobfspw=$( (command -v openssl >/dev/null 2>&1 && openssl rand -base64 32) | tr -dc 'A-Za-z0-9' | cut -c1-24)
+[ -n "$hyobfspw" ] || hyobfspw="obfs$(date +%s)$RANDOM"
+echo "$hyobfspw" > "$HOME/agsbx/obfs_pw"
+fi
+else
+echo "$hyobfspw" > "$HOME/agsbx/obfs_pw"
+fi
+hyobfsb="        \"obfs\": {
+            \"type\": \"salamander\",
+            \"password\": \"${hyobfspw}\"
+        },
+"
+hyobfsy="  obfs: salamander
+  obfs-password: ${hyobfspw}
+"
+hyobfsq="&obfs=salamander&obfs-password=${hyobfspw}"
+fi
+# Brutal 仅 sing-box 支持；需要 Brutal 时强制把 Hysteria2 交给 sing-box 承载
+hyforce=""
+if [ -n "$hybwq" ] && [ -x "$HOME/agsbx/sing-box" ] && [ -s "$HOME/agsbx/sb.json" ]; then
+hyforce=yes
+echo
+echo "已启用 Brutal：Hysteria2 将由 sing-box 承载（Xray 不支持 Brutal）"
+fi
+if [ -n "$hybw" ]; then
 echo "Hysteria2 Brutal 拥塞控制已启用：上行 ${hyup}Mbps / 下行 ${hydw}Mbps（客户端需填相同带宽才生效）"
 fi
-if [ -e "$HOME/agsbx/xr.json" ]; then
+if [ -n "$hyobfs" ]; then
+echo "Hysteria2 已启用 salamander 混淆：$hyobfspw（客户端需填相同 obfs 密码）"
+fi
+if [ -e "$HOME/agsbx/xr.json" ] && [ "$hyforce" != yes ]; then
+if [ -n "$hyobfsq" ] || [ -n "$hybwq" ]; then
+echo "提示：当前 Hysteria2 由 Xray 承载，Xray 不支持 Brutal 与 salamander 混淆，已忽略 hyup/hydw/hyobfs"
+hybw=""; hybwy=""; hybwq=""; hyobfsb=""; hyobfsy=""; hyobfsq=""
+fi
 cat >> "$HOME/agsbx/xr.json" <<EOF
     {
       "tag": "hy2-xr",
@@ -874,7 +1028,7 @@ cat >> "$HOME/agsbx/sb.json" <<EOF
                 "password": "${uuid}"
             }
         ],
-${hybw}        "ignore_client_bandwidth":false,
+${hybw}${hyobfsb}        "ignore_client_bandwidth":false,
         "tls": {
             "enabled": true,
             "alpn": [
@@ -895,7 +1049,7 @@ xrsbvm(){
 if [ -n "$vmp" ]; then
 vmp=vmpt
 if [ -z "$port_vm_ws" ] && [ ! -e "$HOME/agsbx/port_vm_ws" ]; then
-port_vm_ws=$(shuf -i 10000-65535 -n 1)
+port_vm_ws=$(randport)
 echo "$port_vm_ws" > "$HOME/agsbx/port_vm_ws"
 elif [ -n "$port_vm_ws" ]; then
 echo "$port_vm_ws" > "$HOME/agsbx/port_vm_ws"
@@ -965,7 +1119,7 @@ xrsbso(){
 if [ -n "$sop" ]; then
 sop=sopt
 if [ -z "$port_so" ] && [ ! -e "$HOME/agsbx/port_so" ]; then
-port_so=$(shuf -i 10000-65535 -n 1)
+port_so=$(randport)
 echo "$port_so" > "$HOME/agsbx/port_so"
 elif [ -n "$port_so" ]; then
 echo "$port_so" > "$HOME/agsbx/port_so"
@@ -1019,7 +1173,7 @@ fi
 
 xrsbout(){
 if [ -e "$HOME/agsbx/xr.json" ]; then
-sed -i '${s/,\s*$//}' "$HOME/agsbx/xr.json"
+sed -i '${s/,[[:space:]]*$//}' "$HOME/agsbx/xr.json"
 cat >> "$HOME/agsbx/xr.json" <<EOF
   ],
   "outbounds": [
@@ -1081,6 +1235,12 @@ cat >> "$HOME/agsbx/xr.json" <<EOF
   }
 }
 EOF
+if ! xrcheck; then
+echo
+echo "❌ xr.json 生成后校验失败：Xray 无法加载该配置（上面为内核报错）"
+"$HOME/agsbx/xray" run -test -c "$HOME/agsbx/xr.json" 2>&1 | tail -5
+cfgrollback "$HOME/agsbx/xr.json"
+fi
 if pidof systemd >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/systemd/system/xr.service <<EOF
 [Unit]
@@ -1103,7 +1263,7 @@ ProtectClock=yes
 RestrictSUIDSGID=yes
 RestrictRealtime=yes
 PrivateTmp=yes
-ExecStart=/root/agsbx/xray run -c /root/agsbx/xr.json
+ExecStart=$HOME/agsbx/xray run -c $HOME/agsbx/xr.json
 Restart=always
 RestartSec=3s
 StandardOutput=journal
@@ -1118,8 +1278,8 @@ elif command -v rc-service >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/init.d/xray <<EOF
 #!/sbin/openrc-run
 description="xr service"
-command="/root/agsbx/xray"
-command_args="run -c /root/agsbx/xr.json"
+command="$HOME/agsbx/xray"
+command_args="run -c $HOME/agsbx/xr.json"
 command_background=yes
 pidfile="/run/xray.pid"
 command_background="yes"
@@ -1135,7 +1295,7 @@ nohup "$HOME/agsbx/xray" run -c "$HOME/agsbx/xr.json" >/dev/null 2>&1 &
 fi
 fi
 if [ -e "$HOME/agsbx/sb.json" ]; then
-sed -i '${s/,\s*$//}' "$HOME/agsbx/sb.json"
+sed -i '${s/,[[:space:]]*$//}' "$HOME/agsbx/sb.json"
 cat >> "$HOME/agsbx/sb.json" <<EOF
   ],
   "outbounds": [
@@ -1185,6 +1345,12 @@ cat >> "$HOME/agsbx/sb.json" <<EOF
   }
 }
 EOF
+if ! sbcheck; then
+echo
+echo "❌ sb.json 生成后校验失败：sing-box 无法加载该配置（上面为内核报错）"
+"$HOME/agsbx/sing-box" check -c "$HOME/agsbx/sb.json" 2>&1 | tail -5
+cfgrollback "$HOME/agsbx/sb.json"
+fi
 if pidof systemd >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/systemd/system/sb.service <<EOF
 [Unit]
@@ -1207,7 +1373,7 @@ ProtectClock=yes
 RestrictSUIDSGID=yes
 RestrictRealtime=yes
 PrivateTmp=yes
-ExecStart=/root/agsbx/sing-box run -c /root/agsbx/sb.json
+ExecStart=$HOME/agsbx/sing-box run -c $HOME/agsbx/sb.json
 Restart=always
 RestartSec=3s
 StandardOutput=journal
@@ -1222,8 +1388,8 @@ elif command -v rc-service >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/init.d/sing-box <<EOF
 #!/sbin/openrc-run
 description="sb service"
-command="/root/agsbx/sing-box"
-command_args="run -c /root/agsbx/sb.json"
+command="$HOME/agsbx/sing-box"
+command_args="run -c $HOME/agsbx/sb.json"
 command_background=yes
 pidfile="/run/sing-box.pid"
 command_background="yes"
@@ -1278,6 +1444,10 @@ fi
 if [ "$argo" = "vmpt" ]; then argoport=$(cat "$HOME/agsbx/port_vm_ws" 2>/dev/null); echo "Vmess" > "$HOME/agsbx/vlvm"; elif [ "$argo" = "vwpt" ]; then argoport=$(cat "$HOME/agsbx/port_vw" 2>/dev/null); echo "Vless" > "$HOME/agsbx/vlvm"; fi; echo "$argoport" > "$HOME/agsbx/argoport.log"
 if [ -n "${ARGO_DOMAIN}" ] && [ -n "${ARGO_AUTH}" ]; then
 argoname='固定'
+# token 走环境变量文件（600），避免出现在 systemd 单元文件与 ps 命令行里
+argoenvi="$HOME/agsbx/argo.env"
+printf 'TUNNEL_TOKEN=%s\n' "${ARGO_AUTH}" > "$argoenvi"
+chmod 600 "$argoenvi"
 if pidof systemd >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/systemd/system/argo.service <<EOF
 [Unit]
@@ -1298,12 +1468,14 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 RestrictSUIDSGID=yes
 PrivateTmp=yes
-ExecStart=/root/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${ARGO_AUTH}"
+EnvironmentFile=-$argoenvi
+ExecStart=$HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run
 Restart=always
 RestartSec=5s
 [Install]
 WantedBy=multi-user.target
 EOF
+chmod 600 /etc/systemd/system/argo.service
 systemctl daemon-reload >/dev/null 2>&1
 systemctl enable argo >/dev/null 2>&1
 systemctl start argo >/dev/null 2>&1
@@ -1311,8 +1483,9 @@ elif command -v rc-service >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/init.d/argo <<EOF
 #!/sbin/openrc-run
 description="argo service"
-command="/root/agsbx/cloudflared tunnel"
-command_args="--no-autoupdate --edge-ip-version auto --protocol http2 run --token ${ARGO_AUTH}"
+export TUNNEL_TOKEN="${ARGO_AUTH}"
+command="$HOME/agsbx/cloudflared tunnel"
+command_args="--no-autoupdate --edge-ip-version auto --protocol http2 run"
 pidfile="/run/argo.pid"
 command_background="yes"
 depend() {
@@ -1346,7 +1519,7 @@ fi
 fi
 sleep 5
 echo
-if find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -Eq 'agsbx/(s|x)' || pgrep -f 'agsbx/(s|x)' >/dev/null 2>&1 ; then
+if procunderhome ; then
 [ -f ~/.bashrc ] || touch ~/.bashrc
 sed -i '/agsbx/d' ~/.bashrc
 SCRIPT_PATH="$HOME/bin/agsbx"
@@ -1364,10 +1537,10 @@ crontab -l > /tmp/crontab.tmp 2>/dev/null
 if ! pidof systemd >/dev/null 2>&1 && ! command -v rc-service >/dev/null 2>&1; then
 sed -i '/agsbx\/sing-box/d' /tmp/crontab.tmp
 sed -i '/agsbx\/xray/d' /tmp/crontab.tmp
-if find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -q 'agsbx/s' || pgrep -f 'agsbx/s' >/dev/null 2>&1 ; then
+if procunderhome s ; then
 echo '@reboot sleep 10 && /bin/sh -c "nohup $HOME/agsbx/sing-box run -c $HOME/agsbx/sb.json >/dev/null 2>&1 &"' >> /tmp/crontab.tmp
 fi
-if find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -q 'agsbx/x' || pgrep -f 'agsbx/x' >/dev/null 2>&1 ; then
+if procunderhome x ; then
 echo '@reboot sleep 10 && /bin/sh -c "nohup $HOME/agsbx/xray run -c $HOME/agsbx/xr.json >/dev/null 2>&1 &"' >> /tmp/crontab.tmp
 fi
 fi
@@ -1414,18 +1587,17 @@ fi
 }
 argosbxstatus(){
 echo "=========当前三大内核运行状态========="
-procs=$(find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null)
-if echo "$procs" | grep -Eq 'agsbx/s' || pgrep -f 'agsbx/s' >/dev/null 2>&1; then
+if procunderhome s; then
 echo "Sing-box (版本V$("$HOME/agsbx/sing-box" version 2>/dev/null | awk '/version/{print $NF}'))：运行中"
 else
 echo "Sing-box：未启用"
 fi
-if echo "$procs" | grep -Eq 'agsbx/x' || pgrep -f 'agsbx/x' >/dev/null 2>&1; then
+if procunderhome x; then
 echo "Xray (版本V$("$HOME/agsbx/xray" version 2>/dev/null | awk '/^Xray/{print $2}'))：运行中"
 else
 echo "Xray：未启用"
 fi
-if echo "$procs" | grep -Eq 'agsbx/c' || pgrep -f 'agsbx/c' >/dev/null 2>&1; then
+if procunderhome c; then
 echo "Argo (版本V$("$HOME/agsbx/cloudflared" version 2>/dev/null | awk '{print $3}'))：运行中"
 else
 echo "Argo：未启用"
@@ -2030,10 +2202,47 @@ echo "\"${sxname}any-reality-$hostname\","
 fi
 if grep -q 'hy2-sb' "$HOME/agsbx/sb.json" >/dev/null 2>&1 || grep -q 'hy2-xr' "$HOME/agsbx/xr.json" >/dev/null 2>&1; then
 echo "💣【 Hysteria2 】节点信息如下："
+sha=""
+hypsha=""
 if { [ -f "$HOME/agsbx/sb.json" ] && grep -q 'hy2-sb' "$HOME/agsbx/sb.json" && ! grep -A 14 'hy2-sb' "$HOME/agsbx/sb.json" | grep -q 'ygkkkca'; } || { [ -f "$HOME/agsbx/xr.json" ] && grep -q 'hy2-xr' "$HOME/agsbx/xr.json" && ! grep -A 20 'hy2-xr' "$HOME/agsbx/xr.json" | grep -q 'ygkkkca'; }; then
-sha=$(cat "$HOME/agsbx/SHA256.txt")
+sha=$(cat "$HOME/agsbx/SHA256.txt" 2>/dev/null)
+fi
+if [ -n "$sha" ]; then
+hypsha="&pinSHA256=$sha"
 fi
 port_hy2=$(cat "$HOME/agsbx/port_hy2")
+# 从已生成配置回读 Brutal / obfs，保证 list 重生成的链接与订阅参数不丢
+hybw=""
+hybwy=""
+hybwq=""
+hyobfsb=""
+hyobfsy=""
+hyobfsq=""
+if [ -s "$HOME/agsbx/sb.json" ] && grep -q 'hy2-sb' "$HOME/agsbx/sb.json" 2>/dev/null; then
+hyup2=$(grep -o '"up_mbps": *[0-9]*' "$HOME/agsbx/sb.json" 2>/dev/null | head -1 | tr -dc '0-9')
+hydw2=$(grep -o '"down_mbps": *[0-9]*' "$HOME/agsbx/sb.json" 2>/dev/null | head -1 | tr -dc '0-9')
+if [ -n "$hyup2" ] && [ -n "$hydw2" ]; then
+hybw="        \"up_mbps\": ${hyup2},
+        \"down_mbps\": ${hydw2},
+"
+hybwy="  up: \"${hyup2} Mbps\"
+  down: \"${hydw2} Mbps\"
+"
+hybwq="&upmbps=${hyup2}&downmbps=${hydw2}"
+fi
+hyobfspw=$(grep -A2 '"type": "salamander"' "$HOME/agsbx/sb.json" 2>/dev/null | grep -o '"password": *"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+if [ -n "$hyobfspw" ]; then
+hyobfsb="        \"obfs\": {
+            \"type\": \"salamander\",
+            \"password\": \"${hyobfspw}\"
+        },
+"
+hyobfsy="  obfs: salamander
+  obfs-password: ${hyobfspw}
+"
+hyobfsq="&obfs=salamander&obfs-password=${hyobfspw}"
+fi
+fi
 hy2_ports=$(iptables -t nat -nL --line 2>/dev/null | grep -w "$port_hy2" | awk '{print $8}' | sed 's/dpts://; s/dpt://' | tr '\n' ',' | sed 's/,$//')
 if [ -n "$hy2_ports" ] || [ -n "$hyjpt" ]; then
 echo "Hysteria2跳跃端口已开启：$hy2_ports"
@@ -2049,7 +2258,7 @@ else
 hyps=
 fi
 #hy2_link="hysteria2://$uuid@$server_ip:$port_hy2?security=tls&alpn=h3&insecure=1&allowInsecure=1$hyps&sni=www.bing.com#${sxname}hy2-$hostname"
-hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=0&allowInsecure=0$hyps$hybwq&sni=$sni&pinSHA256=$sha#${sxname}hy2-$hostname"
+hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=0&allowInsecure=0$hyps$hybwq$hyobfsq&sni=$sni$hypsha#${sxname}hy2-$hostname"
 echo "$hy2_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$hy2_link"
 echo
@@ -2061,7 +2270,7 @@ cat <<EOF
         "server": "$add",
         "server_port": $port_hy2,
 $(sbhy2ports 2>/dev/null)
-${hybw}        "password": "$uuid",
+${hybw}${hyobfsb}        "password": "$uuid",
         "tls": {
             "enabled": true,
             "server_name": "$sni",
@@ -2084,7 +2293,7 @@ cat <<EOF
   port: $port_hy2
   ports: $cmhy2pt
   password: $uuid                          
-${hybwy}  alpn:
+${hybwy}${hyobfsy}  alpn:
     - h3
   sni: $sni                               
   skip-cert-verify: $msins
@@ -2601,8 +2810,8 @@ echo "相关快捷方式如下：(首次安装成功后需重连SSH，agsbx快�
 showmode
 }
 cleandel(){
-for P in /proc/[0-9]*; do if [ -L "$P/exe" ]; then TARGET=$(readlink -f "$P/exe" 2>/dev/null); if echo "$TARGET" | grep -qE '/agsbx/c|/agsbx/s|/agsbx/x'; then PID=$(basename "$P"); kill "$PID" 2>/dev/null; fi; fi; done
-kill -15 $(pgrep -f 'agsbx/s' 2>/dev/null) $(pgrep -f 'agsbx/c' 2>/dev/null) $(pgrep -f 'agsbx/x' 2>/dev/null) $(pgrep -f 'websbx' 2>/dev/null) >/dev/null 2>&1
+killhome s; killhome x; killhome c
+killhome s; killhome x; killhome c
 sed -i '/agsbx/d' ~/.bashrc
 sed -i '/export PATH="\$HOME\/bin:\$PATH"/d' ~/.bashrc
 . ~/.bashrc 2>/dev/null
@@ -2626,15 +2835,14 @@ rc-service "$svc" stop >/dev/null 2>&1
 rc-update del "$svc" default >/dev/null 2>&1
 done
 rm -rf /etc/init.d/{sing-box,xray,argo} /etc/local.d/alpineargosbx.start /etc/local.d/alpinesubsbx.start
-iptables -t nat -F PREROUTING >/dev/null 2>&1
-ip6tables -t nat -F PREROUTING >/dev/null 2>&1
-netfilter-persistent save >/dev/null 2>&1
 rc-service iptables save >/dev/null 2>&1
 rc-service ip6tables save >/dev/null 2>&1
 fi
+hy2natclean
+netfilter-persistent save >/dev/null 2>&1
 }
 xrestart(){
-kill -15 $(pgrep -f 'agsbx/x' 2>/dev/null) >/dev/null 2>&1
+killhome x
 if pidof systemd >/dev/null 2>&1; then
 systemctl restart xr >/dev/null 2>&1
 elif command -v rc-service >/dev/null 2>&1; then
@@ -2644,7 +2852,7 @@ nohup $HOME/agsbx/xray run -c $HOME/agsbx/xr.json >/dev/null 2>&1 &
 fi
 }
 sbrestart(){
-kill -15 $(pgrep -f 'agsbx/s' 2>/dev/null) >/dev/null 2>&1
+killhome s
 if pidof systemd >/dev/null 2>&1; then
 systemctl restart sb >/dev/null 2>&1
 elif command -v rc-service >/dev/null 2>&1; then
@@ -2672,20 +2880,21 @@ echo "当前拥塞控制算法：$(sysctl -n net.ipv4.tcp_congestion_control 2>/
 exit
 elif [ "$1" = "list" ]; then
 cip
+lockfiles
 exit
 elif [ "$1" = "upx" ]; then
 for P in /proc/[0-9]*; do [ -L "$P/exe" ] || continue; TARGET=$(readlink -f "$P/exe" 2>/dev/null) || continue; case "$TARGET" in *"/agsbx/x"*) kill "$(basename "$P")" 2>/dev/null ;; esac; done
-kill -15 $(pgrep -f 'agsbx/x' 2>/dev/null) >/dev/null 2>&1
+killhome x
 upxray && xrestart && echo "Xray内核更新完成" && sleep 2 && cip
 exit
 elif [ "$1" = "ups" ]; then
 for P in /proc/[0-9]*; do [ -L "$P/exe" ] || continue; TARGET=$(readlink -f "$P/exe" 2>/dev/null) || continue; case "$TARGET" in *"/agsbx/s"*) kill "$(basename "$P")" 2>/dev/null ;; esac; done
-kill -15 $(pgrep -f 'agsbx/s' 2>/dev/null) >/dev/null 2>&1
+killhome s
 upsingbox && sbrestart && echo "Sing-box内核更新完成" && sleep 2 && cip
 exit
 elif [ "$1" = "upa" ]; then
 for P in /proc/[0-9]*; do [ -L "$P/exe" ] || continue; TARGET=$(readlink -f "$P/exe" 2>/dev/null) || continue; case "$TARGET" in *"/agsbx/c"*) kill "$(basename "$P")" 2>/dev/null ;; esac; done
-kill -15 $(pgrep -f 'agsbx/c' 2>/dev/null) >/dev/null 2>&1
+killhome c
 argocore=$({ command -v curl >/dev/null 2>&1 && curl -Ls https://data.jsdelivr.com/v1/package/gh/cloudflare/cloudflared || wget -qO- https://data.jsdelivr.com/v1/package/gh/cloudflare/cloudflared; } | grep -Eo '"[0-9.]+"' | sed -n 1p | tr -d '",')
 echo "下载Cloudflared-argo最新正式版内核：$argocore"
 url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu"; out="$HOME/agsbx/cloudflared"; (command -v curl>/dev/null 2>&1 && curl -Lo "$out" -# --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -O "$out" --tries=2 "$url")
@@ -2718,7 +2927,7 @@ xrestart
 ;;
 *"/agsbx/c"*)
 kill "$(basename "$P")" 2>/dev/null
-kill -15 $(pgrep -f 'agsbx/c' 2>/dev/null) >/dev/null 2>&1
+killhome c
 if [ -e "$HOME/agsbx/sbargotoken.log" ]; then
 if pidof systemd >/dev/null 2>&1; then
 systemctl restart argo >/dev/null 2>&1
@@ -2736,9 +2945,9 @@ done
 sleep 5 && echo "重启完成" && sleep 3 && cip
 exit
 fi
-if ! find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -Eq 'agsbx/(s|x)' && ! pgrep -f 'agsbx/(s|x)' >/dev/null 2>&1; then
-for P in /proc/[0-9]*; do if [ -L "$P/exe" ]; then TARGET=$(readlink -f "$P/exe" 2>/dev/null); if echo "$TARGET" | grep -qE '/agsbx/c|/agsbx/s|/agsbx/x'; then PID=$(basename "$P"); kill "$PID" 2>/dev/null && echo "Killed $PID ($TARGET)" || echo "Could not kill $PID ($TARGET)"; fi; fi; done
-kill -15 $(pgrep -f 'agsbx/s' 2>/dev/null) $(pgrep -f 'agsbx/c' 2>/dev/null) $(pgrep -f 'agsbx/x' 2>/dev/null) >/dev/null 2>&1
+if ! procunderhome && [ ! -s "$HOME/agsbx/sb.json" ] && [ ! -s "$HOME/agsbx/xr.json" ]; then
+killhome s; killhome x; killhome c
+killhome s; killhome x; killhome c
 if [ -z "$( (command -v curl >/dev/null 2>&1 && curl -s4m5 -k "$v46url" 2>/dev/null) || (command -v wget >/dev/null 2>&1 && timeout 3 wget -4 -qO- --tries=2 "$v46url" 2>/dev/null) )" ]; then
 echo -e "nameserver 2a00:1098:2b::1\nnameserver 2a00:1098:2c::1" > /etc/resolv.conf
 fi
@@ -2754,26 +2963,32 @@ echo "CPU架构：$cpu"
 echo "Argosbx脚本未安装，开始安装…………" && sleep 1
 if [ -n "$oap" ]; then
 setenforce 0 >/dev/null 2>&1
+iptables-save > "$HOME/agsbx/iptables_before_oap.rules" 2>/dev/null
+ip6tables-save > "$HOME/agsbx/ip6tables_before_oap.rules" 2>/dev/null
+echo
+echo "⚠️  oap=1 会清空服务器上所有 iptables/ip6tables 规则（含 ufw、fail2ban、Docker 的规则）"
+echo "    原规则已备份到 $HOME/agsbx/iptables_before_oap.rules 与 ip6tables_before_oap.rules"
 iptables -P INPUT ACCEPT >/dev/null 2>&1
 iptables -P FORWARD ACCEPT >/dev/null 2>&1
 iptables -P OUTPUT ACCEPT >/dev/null 2>&1
 iptables -F >/dev/null 2>&1
+ip6tables -P INPUT ACCEPT >/dev/null 2>&1
+ip6tables -F >/dev/null 2>&1
 netfilter-persistent save >/dev/null 2>&1
-echo
 echo "iptables执行开放所有端口"
 fi
-if [ ! -f "$HOME/agsbx/SHA256.txt" ]; then
+if [ ! -s "$HOME/agsbx/cert.crt" ] || [ ! -s "$HOME/agsbx/private.key" ]; then
+rm -f "$HOME/agsbx/SHA256.txt"
 command -v openssl >/dev/null 2>&1 && openssl ecparam -genkey -name prime256v1 -out "$HOME/agsbx/private.key" >/dev/null 2>&1
 command -v openssl >/dev/null 2>&1 && openssl req -new -x509 -days 36500 -key "$HOME/agsbx/private.key" -out "$HOME/agsbx/cert.crt" -subj "/CN=www.bing.com" >/dev/null 2>&1
-#if [ ! -f "$HOME/agsbx/private.key" ]; then
-#url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/private.key"; out="$HOME/agsbx/private.key"; (command -v curl>/dev/null 2>&1 && curl -Ls -o "$out" --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -q -O "$out" --tries=2 "$url")
-#url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/cert.crt"; out="$HOME/agsbx/cert.crt"; (command -v curl>/dev/null 2>&1 && curl -Ls -o "$out" --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -q -O "$out" --tries=2 "$url")
-#echo "fc6dca8cfc4081102aa9655d0d4805c27d7266f605541d242ad66ad00a284a35" > "$HOME/agsbx/SHA256.txt"
-#else
-SHA256=$(openssl x509 -in $HOME/agsbx/cert.crt -outform DER | sha256sum | awk '{print $1}')
-echo "$SHA256" > "$HOME/agsbx/SHA256.txt"
 fi
-#fi
+if [ -s "$HOME/agsbx/cert.crt" ] && [ -s "$HOME/agsbx/private.key" ]; then
+chmod 600 "$HOME/agsbx/private.key" 2>/dev/null
+SHA256=$(openssl x509 -in "$HOME/agsbx/cert.crt" -outform DER 2>/dev/null | sha256sum | awk '{print $1}')
+[ -n "$SHA256" ] && echo "$SHA256" > "$HOME/agsbx/SHA256.txt"
+else
+echo "⚠️  自签证书生成失败（可能缺少 openssl），依赖 TLS 的协议会启动失败，请安装 openssl 后重跑脚本"
+fi
 if [ -n "$alns" ] && [ ! -s "/root/ygkkkca/private.key" ]; then
 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/acme-yg/main/acme.sh)
 fi
@@ -2788,6 +3003,7 @@ keyHTA="$HOME/agsbx/private.key"
 echo "HY2/TUIC/Anytls/Xhttp-tls将使用自签证书的TLS"
 fi
 ins
+lockfiles
 if [ -n "$sub" ]; then
 subtokenipsub(){
 if [ -z "$subid" ]; then
@@ -2803,7 +3019,7 @@ if [ -z "$subpt" ]; then
 if [ -n "$(cat "$HOME/agsbx/subport.log" 2>/dev/null)" ]; then
 subport=$(cat $HOME/agsbx/subport.log)
 else
-subport=$(shuf -i 10000-65535 -n 1)
+subport=$(randport)
 fi
 else
 subport="$subpt"
@@ -2842,20 +3058,26 @@ echo "本地IP订阅链接已更新完成"
 fi
 if [ -n "$hyjpt" ] && [ -n "$hyp" ]; then
 echo
+if validhyjpt "$hyjpt"; then
 echo "设置Hysteria2协议的跳跃端口：$hyjpt"
-iptables -t nat -F PREROUTING >/dev/null 2>&1
-ip6tables -t nat -F PREROUTING >/dev/null 2>&1
+hy2natclean
 hyport=$(cat "$HOME/agsbx/port_hy2")
 for port in $hyjpt; do
-iptables -t nat -A PREROUTING -p udp --dport "$port" -j DNAT --to-destination :$hyport
-ip6tables -t nat -A PREROUTING -p udp --dport "$port" -j DNAT --to-destination :$hyport
+iptables -t nat -A PREROUTING -p udp --dport "$port" -m comment --comment agsbx-hy2-jump -j DNAT --to-destination :$hyport
+ip6tables -t nat -A PREROUTING -p udp --dport "$port" -m comment --comment agsbx-hy2-jump -j DNAT --to-destination :$hyport
 done
 netfilter-persistent save >/dev/null 2>&1
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
+echo "提示：检测到 ufw 已启用，跳跃端口需要自行放行，例如：ufw allow $hyjpt/udp"
+fi
 if command -v rc-service >/dev/null 2>&1 && command -v rc-update >/dev/null 2>&1; then
 rc-update show default 2>/dev/null | grep -q 'iptables' || rc-update add iptables >/dev/null 2>&1
 rc-update show default 2>/dev/null | grep -q 'ip6tables' || rc-update add ip6tables >/dev/null 2>&1
 rc-service iptables save >/dev/null 2>&1
 rc-service ip6tables save >/dev/null 2>&1
+fi
+else
+echo "提示：hyjpt=\"$hyjpt\" 格式不正确（应为 20000 或 20000:30000 这类写法），已跳过端口跳跃"
 fi
 fi
 cip

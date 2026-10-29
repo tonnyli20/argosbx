@@ -40,6 +40,24 @@
 - systemd 单元改为 `network-online.target` + `Restart=always` + `StartLimitBurst=5` + `LimitNOFILE=1048576`，修掉重启后节点偶尔起不来、配置错误时刷爆日志两个老问题。
 - 详细对比数据、单流天花板分析与"什么场景选什么协议"见 [docs/PERF-2026-10.md](docs/PERF-2026-10.md)。
 
+#### 11、Hysteria2 salamander 混淆（抗 QUIC 特征识别）
+
+- 裸 QUIC 特征明显，长期使用建议开混淆：`hypt=端口 hyobfs=1`，脚本会随机生成 24 位密码并存在 `~/agsbx/obfs_pw`（也可用 `hyobfspw=自定义密码`）。
+- 分享链接、sing-box 出站、mihomo 配置都会自动带上 `obfs=salamander` 与 `obfs-password`；客户端要填同样的密码，否则连不上（实测不带混淆握手 100% 失败）。
+- 混淆与 Brutal 可同时使用；同时开时 Hysteria2 会强制由 sing-box 承载（Xray 的 hysteria2 不支持 Brutal 与 obfs，脚本会提示并忽略对应参数）。
+
+#### 12、可靠性 / 安全上的改动（本维护分支）
+
+- 随机端口改用内置 `randport()`：优先取 10000-29999（避开 32768+ 内核临时端口段），并跳过已被占用的端口；不再依赖 `shuf`（Alpine 默认没有，之前会导致端口为空、配置非法）。
+- 生成配置后先跑 `xray run -test` / `sing-box check`，不通过自动回滚到上一次可用配置（`*.json.bak`），避免"提示安装成功、实际服务起不来"。
+- 跳跃端口 DNAT 规则带 `agsbx-hy2-jump` 注释，只增删自己加的规则，不再 `iptables -t nat -F PREROUTING` 清空整张表（会连 ufw / Docker 的规则一起清掉）；`del` 在 systemd 系统上也会清理。
+- `oap=1`（开放所有端口）前会先把现有规则备份到 `~/agsbx/iptables_before_oap.rules`，并明确提示这会清空 ufw / fail2ban / Docker 的规则。
+- argo token 从 systemd 单元与 `ps` 命令行移到 `~/agsbx/argo.env`（600）经 `TUNNEL_TOKEN` 传入；`sb.json`、`xr.json`、`private.key`、`uuid` 等含密钥文件统一 600。
+- systemd 单元里写的是安装时的 `$HOME` 绝对路径（不再硬编码 `/root`），`sudo -E` 或非 root 家目录安装也能正常拉起服务。
+- 进程识别按 `$HOME` 归属判断，多用户机器上不会误杀别的用户实例；`list` 重生成的链接会从配置回读 Brutal / obfs 参数，不再丢参数。
+- 参数入口做了校验：非法端口回落随机端口、非 UUID 的 `uuid` 会被忽略、`hyjpt`/`hyup`/`hydw` 格式错误会提示跳过。
+- CI 增加 `shell-lint`（`bash -n` + shellcheck 错误级阻断）。
+
 
 ------------------------------------------------------------------
 

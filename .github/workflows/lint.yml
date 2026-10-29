@@ -1,0 +1,31 @@
+name: shell-lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n 语法检查
+        run: |
+          bash -n argosbx.sh
+          bash -n net-tune.sh
+
+      - name: shellcheck（error 级阻断）
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          shellcheck -S error argosbx.sh net-tune.sh
+
+      - name: shellcheck 警告清单（不阻断）
+        continue-on-error: true
+        run: |
+          shellcheck -S warning -f gcc argosbx.sh net-tune.sh | head -60

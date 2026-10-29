@@ -432,6 +432,15 @@
             <label><input type="checkbox" data-proto="sopt"> Socks5 <span class="pill">sopt</span></label><input type="text" placeholder="留空则随机端口" data-port="sopt">
           </div>
         </div>
+        <div class="protocol-group separator">
+          <h3>Hysteria2 高级(可选，需勾选 hypt)：</h3>
+          <div class="protocol-grid">
+            <label>Brutal 上行 <span class="pill">hyup</span></label><input type="text" id="hyup" placeholder="如 300（Mbps，留空则用 BBR）">
+            <label>Brutal 下行 <span class="pill">hydw</span></label><input type="text" id="hydw" placeholder="如 300（Mbps，与上行同时填才生效）">
+            <label>salamander 混淆 <span class="pill">hyobfs</span></label><input type="text" id="hyobfs" placeholder="填 1 启用（密码自动生成）">
+            <label>混淆密码 <span class="pill">hyobfspw</span></label><input type="text" id="hyobfspw" placeholder="留空则随机生成 24 位">
+          </div>
+        </div>
       </section>
 
       <section class="card outbound-warp">
@@ -569,10 +578,10 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
 
 <script>
 (function(){
-  const CURL = 'bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh)';
-  const WGET = 'bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh)';
+  const CURL = 'bash <(curl -Ls https://raw.githubusercontent.com/tonnyli20/argosbx/maint/argosbx.sh)';
+  const WGET = 'bash <(wget -qO- https://raw.githubusercontent.com/tonnyli20/argosbx/maint/argosbx.sh)';
   const protoKeys = ['sopt','vmpt','vlpt','xhpt','vxpt','vwpt','xupt','xcpt','hypt','tupt','nvpt','anpt','arpt','sspt'];
-  const optIds = ['warp','ippz','uuid','reym','cfip','alns','hyjpt','cdnym','name', 'oap', 'sub', 'subid', 'subpt'];
+  const optIds = ['warp','ippz','uuid','reym','cfip','alns','hyjpt','cdnym','name', 'oap', 'sub', 'subid', 'subpt', 'hyup', 'hydw', 'hyobfs', 'hyobfspw'];
 
   const argoSelect = document.getElementById('argoSelect');
   const agn = document.getElementById('agn');
@@ -691,6 +700,12 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
       const isHy2Enabled = hy2Checkbox.checked;
       hyjptInput.disabled = !isHy2Enabled;
       if (!isHy2Enabled) hyjptInput.value = '';
+      ['hyup','hydw','hyobfs','hyobfspw'].forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.disabled = !isHy2Enabled;
+          if (!isHy2Enabled) el.value = '';
+      });
 
       const isCfipEnabled = vlessXhttpTlsCheckbox.checked || vlessWsVCheckbox.checked || vlessXhttpCheckbox.checked || vmessWsCheckbox.checked;
       cfip.disabled = !isCfipEnabled;
@@ -804,7 +819,7 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
     const keys = Object.keys(m);
     const ordered = [];
     protoKeys.forEach(k => { if (keys.includes(k)) ordered.push(k); });
-    ['warp', 'uuid', 'reym', 'cfip', 'alns', 'hyjpt', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
+    ['warp', 'uuid', 'reym', 'cfip', 'alns', 'hyjpt', 'hyup', 'hydw', 'hyobfs', 'hyobfspw', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
     if (keys.includes('argo')) ordered.push('argo');
     if (keys.includes('agn')) ordered.push('agn');
     if (keys.includes('agk')) ordered.push('agk');
