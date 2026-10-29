@@ -74,6 +74,28 @@
 - 版本号解析：Xray 取 `Xray <ver>`、sing-box 取 `sing-box version <ver>`、cloudflared 取 `cloudflared version <ver>`；比较按点分段数值（`25.10.1 > 25.9.11`，忽略前导 `v` 与 `-alpha` 之类后缀）。
 - 状态输出里未启用的内核也会显示已安装版本（如 `Xray (版本V26.3.27)：未启用`），方便确认升级是否生效。
 
+#### 14、Argo 节点不再"凭空消失"（`agsbx list` 重新生成后仍保留 13 条）
+
+Argo 那 13 条节点（443 系 6 条 + 80 系 7 条）的生成条件是"知道 argo 域名 + 知道主协议是 vm 还是 vw"。老逻辑只认两个状态文件 `~/agsbx/sbargoym.log` 与 `~/agsbx/vlvm`，一旦这两个文件缺失（老版本安装、手工清理、或换过隧道），`agsbx list` 会**静默丢掉全部 13 条**，23 条订阅只剩 10 条直连。
+
+现在：
+
+| 项 | 行为 |
+|---|---|
+| argo 域名来源 | `sbargoym.log` → `~/agsbx/agnd` → 环境变量 `agnd=xxx` → `argo.log` 里的 trycloudflare 域名，逐级回退 |
+| 主协议识别 | `vlvm` 文件缺失时，从 `xr.json`/`sb.json` 的入站 tag（`vmess-*` / `vless-ws*`）自动判断，并写回 `vlvm` |
+| 优选地址 | 不再使用上游作者的 `ygN.ygkkk.dpdns.org` 池（会解析为空或只出 IPv6，13 条里有 7 条必挂），改为 `agip1/agip2/agip3` 三地址轮换，默认取 `cdnip1` / 自己的 argo 域名 / `cdnip2`；`2096`、`2095` 也从 IPv6 字面量改成 IPv4 可达地址 |
+
+自定义优选地址（可选）：
+
+```bash
+agip1=104.16.132.229 agip2=agro.example.com agip3=www.wto.org agsbx list
+```
+
+或把隧道域名单独存一份：`echo agro.example.com > ~/agsbx/agnd && chmod 600 ~/agsbx/agnd`，之后 `agsbx list` 会一直用它。
+
+实测（Oracle 168.138.13.23，13 条 argo 全部经 sing-box 端到端跑通，HTTP 204）：443 / 8443 / 2053 / 2083 / 2087 / 2096 / 80 / 8080 / 8880 / 2052 / 2082 / 2086 / 2095。
+
 
 ------------------------------------------------------------------
 
