@@ -2310,7 +2310,8 @@ hybwq=""
 hyobfsb=""
 hyobfsy=""
 hyobfsq=""
-if [ -s "$HOME/agsbx/sb.json" ] && grep -q 'hy2-sb' "$HOME/agsbx/sb.json" 2>/dev/null; then
+hy2sbport=$(grep -A6 '"type": "hysteria2"' "$HOME/agsbx/sb.json" 2>/dev/null | grep -m1 -o '"listen_port": *[0-9]*' | tr -dc '0-9')
+if [ -s "$HOME/agsbx/sb.json" ] && grep -q 'hy2-sb' "$HOME/agsbx/sb.json" 2>/dev/null && [ "$hy2sbport" = "$port_hy2" ]; then
 hyup2=$(grep -o '"up_mbps": *[0-9]*' "$HOME/agsbx/sb.json" 2>/dev/null | head -1 | tr -dc '0-9')
 hydw2=$(grep -o '"down_mbps": *[0-9]*' "$HOME/agsbx/sb.json" 2>/dev/null | head -1 | tr -dc '0-9')
 if [ -n "$hyup2" ] && [ -n "$hydw2" ]; then
@@ -2350,7 +2351,7 @@ else
 hyps=
 fi
 #hy2_link="hysteria2://$uuid@$server_ip:$port_hy2?security=tls&alpn=h3&insecure=1&allowInsecure=1$hyps&sni=www.bing.com#${sxname}hy2-$hostname"
-hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=0&allowInsecure=0$hyps$hybwq$hyobfsq&sni=$sni$hypsha#${sxname}hy2-$hostname"
+hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=$jhins&allowInsecure=$jhins$hyps$hybwq$hyobfsq&sni=$sni$hypsha#${sxname}hy2-$hostname"
 echo "$hy2_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$hy2_link"
 echo
