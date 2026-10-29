@@ -247,6 +247,21 @@ case "$warp" in *s6*|x) sbyx='ipv6_only' ;; *) sbyx='prefer_ipv4' ;; esac
 case "$warp" in *x6*) xryx='ForceIPv6' ;; *x*) xryx='ForceIPv4v6' ;; *) xryx='ForceIPv6v4' ;; esac
 fi
 }
+a4(){
+local h ip
+h="$1"
+[ -z "$h" ] && return 0
+case "$h" in
+  *:*) printf '%s' "$h"; return 0 ;;
+  *[!0-9.]*) : ;;
+  *) printf '%s' "$h"; return 0 ;;
+esac
+ip=$(getent ahostsv4 "$h" 2>/dev/null | awk 'NR==1{print $1}')
+[ -z "$ip" ] && ip=$(dig +short A "$h" 2>/dev/null | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+[ -z "$ip" ] && ip=$(nslookup -type=A "$h" 2>/dev/null | awk '/^Address: /{print $2}' | tail -1)
+[ -z "$ip" ] && ip=$h
+printf '%s' "$ip"
+}
 corever(){
 # 读取内核版本号：corever <二进制路径> <x|s|c>，读取失败输出空
 [ -x "$1" ] || return 0
@@ -2475,43 +2490,50 @@ elif grep -qs '"tag": *"vless-ws' "$HOME/agsbx/xr.json" "$HOME/agsbx/sb.json" 2>
 fi
 fi
 if [ -n "$vlvm" ]; then printf '%s\n' "$vlvm" > "$HOME/agsbx/vlvm"; chmod 600 "$HOME/agsbx/vlvm" 2>/dev/null; fi
-agip1=${agip1:-$cdnip1}
-agip2=${agip2:-$argodomain}
-agip3=${agip3:-$cdnip2}
-[ -z "$agip1" ] && agip1=www.shopify.com
-[ -z "$agip2" ] && agip2=$argodomain
-[ -z "$agip3" ] && agip3=www.wto.org
+_agl=()
+if [ -s "$HOME/agsbx/agip" ]; then
+while IFS= read -r _gl; do
+_gl=$(printf '%s' "$_gl" | tr -d ' \t\r')
+case "$_gl" in ''|\#*) continue ;; esac
+_agl+=("$_gl")
+done < "$HOME/agsbx/agip"
+fi
+[ ${#_agl[@]} -eq 0 ] && _agl=("$(a4 "$cdnip1")" "$(a4 "$argodomain")" "$(a4 "$cdnip2")")
+agip1=${agip1:-${_agl[0]}}
+agip2=${agip2:-${_agl[1]}}
+agip3=${agip3:-${_agl[2]}}
+[ -z "$agip1" ] && agip1=$(a4 "$cdnip1")
+[ -z "$agip2" ] && agip2=$agip1
+[ -z "$agip3" ] && agip3=$agip1
 if [ "$vlvm" = "Vmess" ]; then
-vmatls_link1="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-tls-argo-$hostname-443\", \"add\": \"$cdnip1\", \"port\": \"443\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"tls\", \"sni\": \"$argodomain\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
-echo "$vmatls_link1" >> "$HOME/agsbx/jhsub.txt"
-vmatls_link2="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-tls-argo-$hostname-8443\", \"add\": \"$agip2\", \"port\": \"8443\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"tls\", \"sni\": \"$argodomain\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
-echo "$vmatls_link2" >> "$HOME/agsbx/jhsub.txt"
-vmatls_link3="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-tls-argo-$hostname-2053\", \"add\": \"$agip3\", \"port\": \"2053\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"tls\", \"sni\": \"$argodomain\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
-echo "$vmatls_link3" >> "$HOME/agsbx/jhsub.txt"
-vmatls_link4="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-tls-argo-$hostname-2083\", \"add\": \"$agip1\", \"port\": \"2083\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"tls\", \"sni\": \"$argodomain\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
-echo "$vmatls_link4" >> "$HOME/agsbx/jhsub.txt"
-vmatls_link5="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-tls-argo-$hostname-2087\", \"add\": \"$agip2\", \"port\": \"2087\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"tls\", \"sni\": \"$argodomain\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
-echo "$vmatls_link5" >> "$HOME/agsbx/jhsub.txt"
-vmatls_link6="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-tls-argo-$hostname-2096\", \"add\": \"$agip2\", \"port\": \"2096\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"tls\", \"sni\": \"$argodomain\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
-echo "$vmatls_link6" >> "$HOME/agsbx/jhsub.txt"
-vma_link7="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-80\", \"add\": \"$cdnip2\", \"port\": \"80\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link7" >> "$HOME/agsbx/jhsub.txt"
-vma_link8="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-8080\", \"add\": \"$agip3\", \"port\": \"8080\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link8" >> "$HOME/agsbx/jhsub.txt"
-vma_link9="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-8880\", \"add\": \"$agip1\", \"port\": \"8880\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link9" >> "$HOME/agsbx/jhsub.txt"
-vma_link10="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-2052\", \"add\": \"$agip3\", \"port\": \"2052\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link10" >> "$HOME/agsbx/jhsub.txt"
-vma_link11="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-2082\", \"add\": \"$agip2\", \"port\": \"2082\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link11" >> "$HOME/agsbx/jhsub.txt"
-vma_link12="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-2086\", \"add\": \"$agip1\", \"port\": \"2086\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link12" >> "$HOME/agsbx/jhsub.txt"
-vma_link13="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vmess-ws-argo-$hostname-2095\", \"add\": \"$agip3\", \"port\": \"2095\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
-echo "$vma_link13" >> "$HOME/agsbx/jhsub.txt"
+if [ "$aghttp" = "yes" ]; then
+agports="443 8443 2053 2083 2087 2096 80 8080 8880 2052 2082 2086 2095"
+else
+agports="443 8443 2053 2083 2087 2096 443 8443 2053 2083 2087 2096 443"
+fi
+_agn=0; _seen=" "
+for _ap in $agports; do
+_agn=$((_agn+1))
+_ai=$(( (_agn-1) % ${#_agl[@]} ))
+_aip=${_agl[$_ai]}
+case "$_ap" in
+80|8080|8880|2052|2082|2086|2095) _atls=''; _asni='' ;;
+*) _atls=tls; _asni=$argodomain ;;
+esac
+case "$_seen" in
+*" $_ap "*) _aname="${sxname}vmess-ws-tls-argo-$hostname-$_ap-$_agn" ;;
+*) _aname="${sxname}vmess-ws-tls-argo-$hostname-$_ap" ;;
+esac
+_seen="$_seen$_ap "
+_alink="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"$_aname\", \"add\": \"$_aip\", \"port\": \"$_ap\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"$_atls\", \"sni\": \"$_asni\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
+echo "$_alink" >> "$HOME/agsbx/jhsub.txt"
+[ "$_agn" = 1 ] && vmatls_link1="$_alink"
+[ "$_agn" = 7 ] && vma_link7="$_alink"
+done
 sbvmargopt(){
 cat <<EOF
 {
-            "server": "$cdnip1",
+            "server": "$agip1",
             "server_port": 443,
             "tag": "${sxname}vmess-ws-tls-argo-$hostname-443",
             "tls": {
@@ -2537,11 +2559,11 @@ cat <<EOF
             "uuid": "$uuid"
         },
 {
-            "server": "$cdnip2",
-            "server_port": 80,
-            "tag": "${sxname}vmess-ws-argo-$hostname-80",
+            "server": "$agip2",
+            "server_port": 8443,
+            "tag": "${sxname}vmess-ws-tls-argo-$hostname-8443",
             "tls": {
-                "enabled": false,
+                "enabled": true,
                 "server_name": "$argodomain",
                 "insecure": false,
                 "utls": {
@@ -2566,13 +2588,13 @@ EOF
 }
 sbvmargopt1(){
 echo "\"${sxname}vmess-ws-tls-argo-$hostname-443\","
-echo "\"${sxname}vmess-ws-argo-$hostname-80\","
+echo "\"${sxname}vmess-ws-tls-argo-$hostname-8443\","
 }
 clvmargopt(){
 cat <<EOF
 - name: ${sxname}vmess-ws-tls-argo-$hostname-443                         
   type: vmess
-  server: "$cdnip1"                       
+  server: "$agip1"                       
   port: 443                                     
   uuid: $uuid       
   alterId: 0
@@ -2585,15 +2607,15 @@ cat <<EOF
     path: "$uuid-vm"                             
     headers:
       Host: $argodomain
-- name: ${sxname}vmess-ws-argo-$hostname-80                         
+- name: ${sxname}vmess-ws-tls-argo-$hostname-8443                         
   type: vmess
-  server: "$cdnip2"                        
-  port: 80                                     
+  server: "$agip2"                        
+  port: 8443                                     
   uuid: $uuid       
   alterId: 0
   cipher: auto
   udp: true
-  tls: false
+  tls: true
   network: ws
   servername: $argodomain                    
   ws-opts:
@@ -2604,12 +2626,12 @@ EOF
 }
 clvmargopt1(){
 echo "- ${sxname}vmess-ws-tls-argo-$hostname-443"
-echo "- ${sxname}vmess-ws-argo-$hostname-80"
+echo "- ${sxname}vmess-ws-tls-argo-$hostname-8443"
 }
 elif [ "$vlvm" = "Vless" ]; then
-vwatls_link1="vless://$uuid@$cdnip1:443?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=tls&sni=$argodomain&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-ws-tls-argo-enc-vision-$hostname"
+vwatls_link1="vless://$uuid@$agip1:443?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=tls&sni=$argodomain&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-ws-tls-argo-enc-vision-$hostname"
 echo "$vwatls_link1" >> "$HOME/agsbx/jhsub.txt"
-vwa_link2="vless://$uuid@$cdnip2:80?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=none#${sxname}vless-ws-argo-enc-vision-$hostname"
+vwa_link2="vless://$uuid@$agip3:80?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=none#${sxname}vless-ws-argo-enc-vision-$hostname"
 echo "$vwa_link2" >> "$HOME/agsbx/jhsub.txt"
 fi
 sbtk=$(cat "$HOME/agsbx/sbargotoken.log" 2>/dev/null)
@@ -2624,7 +2646,7 @@ $nametn
 1、💣443端口的$vlvm-ws-tls-argo节点(优选IP与443系端口随便换)
 ${vmatls_link1}${vwatls_link1}
 
-2、💣80端口的$vlvm-ws-argo节点(优选IP与80系端口随便换)
+2、💣8443端口的$vlvm-ws-tls-argo节点(优选IP与TLS端口随便换；如需80系端口用 aghttp=yes 重新 list)
 ${vma_link7}${vwa_link2}
 "
 )

@@ -74,27 +74,35 @@
 - 版本号解析：Xray 取 `Xray <ver>`、sing-box 取 `sing-box version <ver>`、cloudflared 取 `cloudflared version <ver>`；比较按点分段数值（`25.10.1 > 25.9.11`，忽略前导 `v` 与 `-alpha` 之类后缀）。
 - 状态输出里未启用的内核也会显示已安装版本（如 `Xray (版本V26.3.27)：未启用`），方便确认升级是否生效。
 
-#### 14、Argo 节点不再"凭空消失"（`agsbx list` 重新生成后仍保留 13 条）
+#### 14、Argo 那 13 条节点：不再消失、不再因 IPv6 超时、默认改走 TLS 端口
 
-Argo 那 13 条节点（443 系 6 条 + 80 系 7 条）的生成条件是"知道 argo 域名 + 知道主协议是 vm 还是 vw"。老逻辑只认两个状态文件 `~/agsbx/sbargoym.log` 与 `~/agsbx/vlvm`，一旦这两个文件缺失（老版本安装、手工清理、或换过隧道），`agsbx list` 会**静默丢掉全部 13 条**，23 条订阅只剩 10 条直连。
+Argo 节点块能否生成，取决于"知道 argo 域名 + 知道主协议是 vm 还是 vw"。老逻辑只认两个状态文件 `~/agsbx/sbargoym.log` 与 `~/agsbx/vlvm`，缺一个就**静默丢掉全部 13 条**（23 条订阅只剩 10 条直连）。另外老逻辑用上游作者的 `ygN.ygkkk.dpdns.org` 优选域名池，其中 `yg10` 无解析、`yg12/yg13` 是 CNAME 到别家、`2096/2095` 写死 IPv6 字面量，实测这 7 条在客户端必挂。
 
 现在：
 
 | 项 | 行为 |
 |---|---|
 | argo 域名来源 | `sbargoym.log` → `~/agsbx/agnd` → 环境变量 `agnd=xxx` → `argo.log` 里的 trycloudflare 域名，逐级回退 |
-| 主协议识别 | `vlvm` 文件缺失时，从 `xr.json`/`sb.json` 的入站 tag（`vmess-*` / `vless-ws*`）自动判断，并写回 `vlvm` |
-| 优选地址 | 不再使用上游作者的 `ygN.ygkkk.dpdns.org` 池（会解析为空或只出 IPv6，13 条里有 7 条必挂），改为 `agip1/agip2/agip3` 三地址轮换，默认取 `cdnip1` / 自己的 argo 域名 / `cdnip2`；`2096`、`2095` 也从 IPv6 字面量改成 IPv4 可达地址 |
+| 主协议识别 | `vlvm` 缺失时，从 `xr.json`/`sb.json` 入站 tag（`vmess-*` / `vless-ws*`）自动判断并写回 |
+| 优选地址 | **只写 IPv4 字面量**。域名普遍同时有 AAAA，客户端（Karing/sing-box）优先连 IPv6，机器没有全局 IPv6 时直接 `dial en0: network is unreachable` → 表现为"全部连接超时"。可写多个地址到 `~/agsbx/agip`（每行一个），节点按顺序轮换 |
+| 端口 | **默认只用 TLS 端口** 443 / 8443 / 2053 / 2083 / 2087 / 2096（13 条按端口轮换）。80 段端口（80/8080/8880/2052/2082/2086/2095）在多数家宽对境外 CF IP 被 RST 或丢包，实测 7 条全挂；确需保留用 `aghttp=yes agsbx list` |
 
-自定义优选地址（可选）：
+自定义：
 
 ```bash
-agip1=104.16.132.229 agip2=agro.example.com agip3=www.wto.org agsbx list
+# 写入优选地址池（IPv4，建议 2~3 个），之后 list 一直用它
+printf '162.159.130.36\n162.159.140.1\n104.26.4.60\n' > ~/agsbx/agip && chmod 600 ~/agsbx/agip
+# 临时覆盖
+agip1=104.16.132.229 agip2=104.17.3.81 agsbx list
+# 需要 80 段端口
+aghttp=yes agsbx list
 ```
 
-或把隧道域名单独存一份：`echo agro.example.com > ~/agsbx/agnd && chmod 600 ~/agsbx/agnd`，之后 `agsbx list` 会一直用它。
+实测（Oracle 168.138.13.23，本机在中国电信家宽）：
 
-实测（Oracle 168.138.13.23，13 条 argo 全部经 sing-box 端到端跑通，HTTP 204）：443 / 8443 / 2053 / 2083 / 2087 / 2096 / 80 / 8080 / 8880 / 2052 / 2082 / 2086 / 2095。
+- 改动前：13 条 argo 在 Karing 里 **0 条可用**（域名双栈 + 80 段端口 + 上游死域名池三重叠加）
+- 改动后：Mac 上 sing-box 逐条 socks 出站，13 条 TLS argo **13/13 HTTP 204**；Karing 内核 API 直测 6 个 TLS 端口 **15/18 次成功**（延迟 0.45–2.7s，偶发 6s）
+- 直连 10 条服务端同样全通；其中 3 条 `VLESS Encryption` 需要 Xray 内核客户端，Karing（sing-box 内核）不支持
 
 
 ------------------------------------------------------------------
