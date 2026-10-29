@@ -2,7 +2,7 @@
 export LANG=en_US.UTF-8
 mkdir -p "$HOME/agsbx"
 url='https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh'
-case "${*##* }" in list|del|upx|ups|upa|res) ;; *)
+case "${*##* }" in list|del|upx|ups|upa|res|tune) ;; *)
 cmd=""
 for v in uuid vlpt vmpt vwpt hypt tupt xhpt vxpt anpt arpt sspt sopt nvpt xupt xcpt reym cdnym argo agn agk warp name oap; do
 [ -n "${!v+x}" ] && cmd+="$v=\"${!v}\" "
@@ -31,9 +31,12 @@ if [ "$1" = "rep" ]; then
 [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：rep重置协议时，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
 fi
 else
-[ "$1" = "del" ] || [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：未安装argosbx脚本，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
+[ "$1" = "del" ] || [ "$1" = "tune" ] || [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：未安装argosbx脚本，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
 fi
 export uuid=${uuid:-''}
+export hyup=${hyup:-''}
+export hydw=${hydw:-''}
+export netopt=${netopt:-'yes'}
 export port_vl_re=${vlpt:-''}
 export port_vm_ws=${vmpt:-''}
 export port_vw=${vwpt:-''}
@@ -201,6 +204,47 @@ echo "$uuid" > "$HOME/agsbx/uuid"
 fi
 uuid=$(cat "$HOME/agsbx/uuid")
 echo "UUID密码：$uuid"
+}
+nettune(){
+[ "$netopt" = "no" ] && return
+[ "$EUID" -ne 0 ] && return
+command -v sysctl >/dev/null 2>&1 || return
+[ -d /etc/sysctl.d ] || return
+sysctlfile=/etc/sysctl.d/99-agsbx-net.conf
+echo
+echo "=========网络内核参数调优========="
+cat > "$sysctlfile" <<EOF
+# Argosbx 网络调优（2026-10 实测：TCP 单流易被运营商限速，QUIC 大 BDP 受益最大）
+# 跳过调优：安装时加 netopt=no；回滚：删除本文件后执行 sysctl --system
+net.core.rmem_max = 33554432
+net.core.wmem_max = 33554432
+net.core.rmem_default = 1048576
+net.core.wmem_default = 1048576
+net.core.optmem_max = 65536
+net.core.netdev_max_backlog = 16384
+net.core.somaxconn = 8192
+net.ipv4.ip_local_port_range = 10240 65000
+net.ipv4.tcp_rmem = 4096 87380 33554432
+net.ipv4.tcp_wmem = 4096 65536 16777216
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_mtu_probing = 1
+net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.udp_rmem_min = 16384
+net.ipv4.udp_wmem_min = 16384
+EOF
+if sysctl -n net.ipv4.tcp_available_congestion_control 2>/dev/null | grep -qw bbr; then
+cat >> "$sysctlfile" <<EOF
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+EOF
+fi
+if sysctl -p "$sysctlfile" >/dev/null 2>&1; then
+echo "已写入 $sysctlfile 并立即生效（rmem/wmem 32MB、BBR+fq、FastOpen 等）"
+else
+echo "已写入 $sysctlfile，部分参数受限（容器/LXC），将在重启后按内核支持生效"
+fi
 }
 installxray(){
 echo
@@ -769,6 +813,19 @@ echo "$port_hy2" > "$HOME/agsbx/port_hy2"
 fi
 port_hy2=$(cat "$HOME/agsbx/port_hy2")
 echo "Hysteria2端口：$port_hy2"
+hybw=""
+hybwy=""
+hybwq=""
+if [ -n "$hyup" ] && [ -n "$hydw" ]; then
+hybw="        \"up_mbps\": ${hyup},
+        \"down_mbps\": ${hydw},
+"
+hybwy="  up: \"${hyup} Mbps\"
+  down: \"${hydw} Mbps\"
+"
+hybwq="&upmbps=${hyup}&downmbps=${hydw}"
+echo "Hysteria2 Brutal 拥塞控制已启用：上行 ${hyup}Mbps / 下行 ${hydw}Mbps（客户端需填相同带宽才生效）"
+fi
 if [ -e "$HOME/agsbx/xr.json" ]; then
 cat >> "$HOME/agsbx/xr.json" <<EOF
     {
@@ -817,7 +874,7 @@ cat >> "$HOME/agsbx/sb.json" <<EOF
                 "password": "${uuid}"
             }
         ],
-        "ignore_client_bandwidth":false,
+${hybw}        "ignore_client_bandwidth":false,
         "tls": {
             "enabled": true,
             "alpn": [
@@ -1028,14 +1085,27 @@ if pidof systemd >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/systemd/system/xr.service <<EOF
 [Unit]
 Description=xr service
-After=network.target
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 [Service]
 Type=simple
 NoNewPrivileges=yes
+LimitNOFILE=1048576
 TimeoutStartSec=0
+SyslogIdentifier=xr
+ProtectSystem=full
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectClock=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+PrivateTmp=yes
 ExecStart=/root/agsbx/xray run -c /root/agsbx/xr.json
-Restart=on-failure
-RestartSec=5s
+Restart=always
+RestartSec=3s
 StandardOutput=journal
 StandardError=journal
 [Install]
@@ -1119,14 +1189,27 @@ if pidof systemd >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/systemd/system/sb.service <<EOF
 [Unit]
 Description=sb service
-After=network.target
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 [Service]
 Type=simple
 NoNewPrivileges=yes
+LimitNOFILE=1048576
 TimeoutStartSec=0
+SyslogIdentifier=sb
+ProtectSystem=full
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectClock=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+PrivateTmp=yes
 ExecStart=/root/agsbx/sing-box run -c /root/agsbx/sb.json
-Restart=on-failure
-RestartSec=5s
+Restart=always
+RestartSec=3s
 StandardOutput=journal
 StandardError=journal
 [Install]
@@ -1157,6 +1240,7 @@ fi
 fi
 }
 ins(){
+nettune
 if [ "$nvp" != yes ] && [ "$tup" != yes ] && [ "$anp" != yes ] && [ "$arp" != yes ] && [ "$ssp" != yes ]; then
 installxray
 xrsbhy2
@@ -1198,13 +1282,24 @@ if pidof systemd >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 cat > /etc/systemd/system/argo.service <<EOF
 [Unit]
 Description=argo service
-After=network.target
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 [Service]
 Type=simple
 NoNewPrivileges=yes
+LimitNOFILE=1048576
 TimeoutStartSec=0
+SyslogIdentifier=argo
+ProtectSystem=full
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+PrivateTmp=yes
 ExecStart=/root/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${ARGO_AUTH}"
-Restart=on-failure
+Restart=always
 RestartSec=5s
 [Install]
 WantedBy=multi-user.target
@@ -1954,7 +2049,7 @@ else
 hyps=
 fi
 #hy2_link="hysteria2://$uuid@$server_ip:$port_hy2?security=tls&alpn=h3&insecure=1&allowInsecure=1$hyps&sni=www.bing.com#${sxname}hy2-$hostname"
-hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=0&allowInsecure=0$hyps&sni=$sni&pinSHA256=$sha#${sxname}hy2-$hostname"
+hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=0&allowInsecure=0$hyps$hybwq&sni=$sni&pinSHA256=$sha#${sxname}hy2-$hostname"
 echo "$hy2_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$hy2_link"
 echo
@@ -1966,7 +2061,7 @@ cat <<EOF
         "server": "$add",
         "server_port": $port_hy2,
 $(sbhy2ports 2>/dev/null)
-        "password": "$uuid",
+${hybw}        "password": "$uuid",
         "tls": {
             "enabled": true,
             "server_name": "$sni",
@@ -1989,7 +2084,7 @@ cat <<EOF
   port: $port_hy2
   ports: $cmhy2pt
   password: $uuid                          
-  alpn:
+${hybwy}  alpn:
     - h3
   sni: $sni                               
   skip-cert-verify: $msins
@@ -2571,6 +2666,10 @@ cleandel
 rm -rf "$HOME/agsbx"/{sb.json,xr.json,sbargoym.log,sbargotoken.log,argo.log,argoport.log,cdnym,name}
 echo "Argosbx重置协议完成，开始更新相关协议变量……" && sleep 2
 echo
+elif [ "$1" = "tune" ]; then
+nettune
+echo "当前拥塞控制算法：$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)，队列算法：$(sysctl -n net.core.default_qdisc 2>/dev/null)"
+exit
 elif [ "$1" = "list" ]; then
 cip
 exit
