@@ -745,10 +745,10 @@ cat >> "$HOME/agsbx/xr.json" <<EOF
         "clients": [
           {
             "id": "${uuid}",
-            "flow": "xtls-rprx-vision"
+            "flow": ""
           }
         ],
-        "decryption": "${dekey}"
+        "decryption": "none"
       },
       "streamSettings": {
         "network": "ws",
@@ -1836,14 +1836,14 @@ fi
 if grep vless-ws "$HOME/agsbx/xr.json" >/dev/null 2>&1; then
 echo "💣【 Vless-ws-enc 】支持ENC加密，节点信息如下："
 port_vw=$(cat "$HOME/agsbx/port_vw")
-vl_vw_link="vless://$uuid@$server_ip:$port_vw?encryption=$enkey&flow=xtls-rprx-vision&type=ws&path=$uuid-vw#${sxname}vl-ws-enc-$hostname"
+vl_vw_link="vless://$uuid@$server_ip:$port_vw?encryption=none&flow=&type=ws&path=$uuid-vw#${sxname}vl-ws-enc-$hostname"
 echo "$vl_vw_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_vw_link"
 echo
 if [ -f "$HOME/agsbx/cdnym" ]; then
 echo "💣【 Vless-ws-enc-cdn 】支持ENC加密，节点信息如下："
 echo "可自行更换优选IP域名，如是回源端口需手动修改443或者80系端口"
-vl_vw_cdn_link="vless://$uuid@$cdnip1:$port_vw?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$xvvmcdnym&path=$uuid-vw#${sxname}vl-ws-enc-cdn-$hostname"
+vl_vw_cdn_link="vless://$uuid@$cdnip1:$port_vw?encryption=none&flow=&type=ws&host=$xvvmcdnym&path=$uuid-vw#${sxname}vl-ws-enc-cdn-$hostname"
 echo "$vl_vw_cdn_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_vw_cdn_link"
 echo
@@ -2629,9 +2629,9 @@ echo "- ${sxname}vmess-ws-tls-argo-$hostname-443"
 echo "- ${sxname}vmess-ws-tls-argo-$hostname-8443"
 }
 elif [ "$vlvm" = "Vless" ]; then
-vwatls_link1="vless://$uuid@$agip1:443?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=tls&sni=$argodomain&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-ws-tls-argo-enc-vision-$hostname"
+vwatls_link1="vless://$uuid@$agip1:443?encryption=none&flow=&type=ws&host=$argodomain&path=$uuid-vw&security=tls&sni=$argodomain&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-ws-tls-argo-enc-vision-$hostname"
 echo "$vwatls_link1" >> "$HOME/agsbx/jhsub.txt"
-vwa_link2="vless://$uuid@$agip3:80?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=none#${sxname}vless-ws-argo-enc-vision-$hostname"
+vwa_link2="vless://$uuid@$agip3:80?encryption=none&flow=&type=ws&host=$argodomain&path=$uuid-vw&security=none#${sxname}vless-ws-argo-enc-vision-$hostname"
 echo "$vwa_link2" >> "$HOME/agsbx/jhsub.txt"
 fi
 sbtk=$(cat "$HOME/agsbx/sbargotoken.log" 2>/dev/null)
