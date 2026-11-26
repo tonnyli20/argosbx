@@ -34,7 +34,7 @@
 注：个别协议仅支持某些客户端
 
 #### 10、网络调优与 Brutal 加速（2026-10 实测数据）
-
+-新的配置地址：https://tonnyli20.github.io/argosbx/
 - 安装时自动写入 `/etc/sysctl.d/99-agsbx-net.conf`（rmem/wmem 32MB、BBR+fq、FastOpen、udp 缓冲等），适配 88ms RTT 这类大 BDP 线路；不想改动系统加 `netopt=no`。已装机器可单独跑 `bash argosbx.sh tune` 或 `bash net-tune.sh`，回滚 `bash net-tune.sh undo`。
 - Hysteria2 支持 Brutal 拥塞控制：`hypt=端口 hyup=上行Mbps hydw=下行Mbps`，生成的链接与订阅会自带带宽参数（客户端需填相同值才生效）。实测比 BBR 快 **40–80 倍**。
 - systemd 单元改为 `network-online.target` + `Restart=always` + `StartLimitBurst=5` + `LimitNOFILE=1048576`，修掉重启后节点偶尔起不来、配置错误时刷爆日志两个老问题。
