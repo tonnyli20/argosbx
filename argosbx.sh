@@ -23,7 +23,7 @@ url="${AGSBX_SELF_URL:-https://raw.githubusercontent.com/tonnyli20/argosbx/maint
 selfurl="$url"
 case "${*##* }" in list|del|upx|ups|upa|res|tune) ;; *)
 cmd=""
-for v in uuid vlpt vmpt vwpt hypt tupt xhpt vxpt anpt arpt sspt sopt nvpt xupt xcpt reym cdnym argo agn agk warp name oap hyup hydw hyobfs hyobfspw netopt; do
+for v in agqc sub subid subpt snpt uuid vlpt vmpt vwpt hypt tupt xhpt vxpt anpt arpt sspt sopt nvpt xupt xcpt reym cdnym argo agn agk warp name oap cfip alns hyjpt hyup hydw hyobfs hyobfspw netopt; do
 [ -n "${!v+x}" ] && cmd+="$v=\"${!v}\" "
 done
 main="bash <(curl -Ls $url)"
@@ -36,7 +36,7 @@ cmd+="$main${*:+ $*}"
 [ -z "${hypt+x}" ] || hyp=yes
 [ -z "${tupt+x}" ] || tup=yes
 [ -z "${xhpt+x}" ] || xhp=yes
-[ -z "${vxpt+x}" ] || vxp=yes
+[ -z "${vxpt+x}" ] || { vxp=yes; vmag=yes; }
 [ -z "${anpt+x}" ] || anp=yes
 [ -z "${sspt+x}" ] || ssp=yes
 [ -z "${arpt+x}" ] || arp=yes
@@ -45,12 +45,13 @@ cmd+="$main${*:+ $*}"
 [ -z "${nvpt+x}" ] || nvp=yes
 [ -z "${xupt+x}" ] || xup=yes
 [ -z "${xcpt+x}" ] || xcp=yes
+[ -z "${snpt+x}" ] || snp=yes
 if procunderhome || [ -s "$HOME/agsbx/sb.json" ] || [ -s "$HOME/agsbx/xr.json" ]; then
 if [ "$1" = "rep" ]; then
-[ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：rep重置协议时，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
+[ "$snp" = yes ] || [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：rep重置协议时，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
 fi
 else
-[ "$1" = "del" ] || [ "$1" = "tune" ] || [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：未安装argosbx脚本，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
+[ "$1" = "del" ] || [ "$1" = "tune" ] || [ "$snp" = yes ] || [ "$xcp" = yes ] || [ "$xup" = yes ] || [ "$nvp" = yes ] || [ "$vwp" = yes ] || [ "$sop" = yes ] || [ "$vxp" = yes ] || [ "$ssp" = yes ] || [ "$vlp" = yes ] || [ "$vmp" = yes ] || [ "$hyp" = yes ] || [ "$tup" = yes ] || [ "$xhp" = yes ] || [ "$anp" = yes ] || [ "$arp" = yes ] || { echo "提示：未安装argosbx脚本，请在脚本前至少设置一个协议变量哦，再见！💣"; exit; }
 fi
 export uuid=${uuid:-''}
 export hyup=${hyup:-''}
@@ -73,11 +74,13 @@ export port_so=${sopt:-''}
 export port_nv=${nvpt:-''}
 export port_xu=${xupt:-''}
 export port_xc=${xcpt:-''}
+export port_sn=${snpt:-''}
 export ym_vl_re=${reym:-''}
 export cdnym=${cdnym:-''}
 export argo=${argo:-''}
 export ARGO_DOMAIN=${agn:-''}
 export ARGO_AUTH=${agk:-''}
+export agqc=${agqc:-''}
 export ippz=${ippz:-''}
 export warp=${warp:-''}
 export name=${name:-''}
@@ -137,7 +140,7 @@ echo "主脚本：bash <(curl -Ls $selfurl) 或 bash <(wget -qO- $selfurl)"
 echo "显示节点信息命令：agsbx list 【或者】 主脚本 list"
 echo "重置变量组命令：自定义各种协议变量组 agsbx rep 【或者】 自定义各种协议变量组 主脚本 rep"
 echo "更新脚本命令：原已安装的自定义各种协议变量组 主脚本 rep"
-echo "更新Xray或Singbox内核命令：agsbx upx或ups 【或者】 主脚本 upx或ups"
+echo "更新Xray或Singbox或者CF隧道的内核命令：agsbx upx或ups或upa 【或者】 主脚本 upx或ups或upa"
 echo "重启脚本命令：agsbx res 【或者】 主脚本 res"
 echo "卸载脚本命令：agsbx del 【或者】 主脚本 del"
 echo "双栈VPS显示IPv4/IPv6节点配置命令：ippz=4或6 agsbx list 【或者】 ippz=4或6 主脚本 list"
@@ -150,7 +153,7 @@ echo "甬哥Github项目 ：github.com/yonggekkk"
 echo "甬哥Blogger博客 ：ygkkk.blogspot.com"
 echo "甬哥YouTube频道 ：www.youtube.com/@ygkkk"
 echo "Argosbx一键无交互小钢炮脚本💣"
-echo "当前版本：V26.7.16"
+echo "当前版本：V26.11.20"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 hostname=$(uname -a | awk '{print $2}')
 op=$(cat /etc/redhat-release 2>/dev/null || cat /etc/os-release 2>/dev/null | grep -i pretty_name | cut -d \" -f2)
@@ -238,7 +241,7 @@ timeout 3 wget -6 --tries=2 -qO- "$v46url" >/dev/null 2>&1 && v6_ok=true
 fi
 if [ "$v4_ok" = true ] && [ "$v6_ok" = true ]; then
 case "$warp" in *s4*) sbyx='prefer_ipv4' ;; *) sbyx='prefer_ipv6' ;; esac
-case "$warp" in *x4*) xryx='ForceIPv4v6' ;; *x*) xryx='ForceIPv6v4' ;; *) xryx='ForceIPv4v6' ;; esac
+case "$warp" in *x4*) xryx='ForceIPv4v6' ;; *x*) xryx='ForceIPv6v4' ;; *) xryx='ForceIPv6v4' ;; esac
 elif [ "$v4_ok" = true ] && [ "$v6_ok" != true ]; then
 case "$warp" in *s4*|x) sbyx='ipv4_only' ;; *) sbyx='prefer_ipv6' ;; esac
 case "$warp" in *x4*) xryx='ForceIPv4' ;; *x*) xryx='ForceIPv6v4' ;; *) xryx='ForceIPv4v6' ;; esac
@@ -499,7 +502,7 @@ private_key_x=$(cat "$HOME/agsbx/xrk/private_key")
 public_key_x=$(cat "$HOME/agsbx/xrk/public_key")
 short_id_x=$(cat "$HOME/agsbx/xrk/short_id")
 fi
-if [ -n "$xhp" ] || [ -n "$vxp" ] || [ -n "$vwp" ]; then
+if [ -n "$xhp" ] || [ -n "$vxp" ] || [ -n "$vwp" ] || [ -n "$vlp" ]; then
 if [ ! -e "$HOME/agsbx/xrk/dekey" ]; then
 vlkey=$("$HOME/agsbx/xray" vlessenc)
 dekey=$(echo "$vlkey" | grep '"decryption":' | sed -n '2p' | cut -d' ' -f2- | tr -d '"')
@@ -775,7 +778,7 @@ elif [ -n "$port_vl_re" ]; then
 echo "$port_vl_re" > "$HOME/agsbx/port_vl_re"
 fi
 port_vl_re=$(cat "$HOME/agsbx/port_vl_re")
-echo "Vless-tcp-reality-v端口：$port_vl_re"
+echo "Vless-tcp-reality-enc端口：$port_vl_re"
 cat >> "$HOME/agsbx/xr.json" <<EOF
         {
             "tag":"reality-vision",
@@ -789,7 +792,7 @@ cat >> "$HOME/agsbx/xr.json" <<EOF
                         "flow": "xtls-rprx-vision"
                     }
                 ],
-                "decryption": "none"
+                "decryption": "${dekey}"
             },
             "streamSettings": {
                 "network": "tcp",
@@ -1019,6 +1022,30 @@ cat >> "$HOME/agsbx/sb.json" <<EOF
 EOF
 else
 ssp=ssptargo
+fi
+if [ -n "$snp" ]; then
+snp=snpt
+if [ -z "$port_sn" ] && [ ! -e "$HOME/agsbx/port_sn" ]; then
+port_sn=$(shuf -i 10000-65535 -n 1)
+echo "$port_sn" > "$HOME/agsbx/port_sn"
+elif [ -n "$port_sn" ]; then
+echo "$port_sn" > "$HOME/agsbx/port_sn"
+fi
+port_sn=$(cat "$HOME/agsbx/port_sn")
+echo "Snell-V6端口：$port_sn"
+cat >> "$HOME/agsbx/sb.json" <<EOF
+        {
+         "type": "snell",
+         "tag": "snellv",
+         "listen": "::",
+         "listen_port": $port_sn,
+         "version": 6,
+         "psk": "$uuid",
+         "mode": "default"
+    },  
+EOF
+else
+snp=snptargo
 fi
 }
 
@@ -1287,9 +1314,11 @@ cat >> "$HOME/agsbx/xr.json" <<EOF
     {
       "protocol": "freedom",
       "tag": "direct",
-      "settings": {
-      "domainStrategy":"${xryx}"
+      "streamSettings": {
+      "sockopt": {
+      "domainStrategy": "${xryx}"
      }
+  }
     },
     {
       "tag": "x-warp-out",
@@ -1310,18 +1339,19 @@ cat >> "$HOME/agsbx/xr.json" <<EOF
             "endpoint": "${xendip}:2408"
           }
         ],
+        "noKernelTun": true,
         "reserved": ${res}
         }
     },
     {
       "tag":"warp-out",
       "protocol":"freedom",
-        "settings":{
-        "domainStrategy":"${wxryx}"
-       },
-       "proxySettings":{
-       "tag":"x-warp-out"
-     }
+      "streamSettings": {
+      "sockopt": {
+      "domainStrategy": "${wxryx}",
+      "dialerProxy": "x-warp-out"
+    }
+  }
 }
   ],
   "routing": {
@@ -1514,14 +1544,14 @@ fi
 }
 ins(){
 nettune
-if [ "$nvp" != yes ] && [ "$tup" != yes ] && [ "$anp" != yes ] && [ "$arp" != yes ] && [ "$ssp" != yes ]; then
+if [ "$nvp" != yes ] && [ "$tup" != yes ] && [ "$anp" != yes ] && [ "$arp" != yes ] && [ "$ssp" != yes ] && [ "$snp" != yes ]; then
 installxray
 xrsbhy2
 xrsbvm
 xrsbso
 warpsx
 xrsbout
-tup="tuptargo"; anp="anptargo"; arp="arptargo"; ssp="ssptargo"; nvp="nvptargo"
+tup="tuptargo"; anp="anptargo"; arp="arptargo"; ssp="ssptargo"; nvp="nvptargo"; snp="snptargo"
 elif [ "$xhp" != yes ] && [ "$vlp" != yes ] && [ "$vxp" != yes ] && [ "$vwp" != yes ] && [ "$xup" != yes ] && [ "$xcp" != yes ]; then
 installsb
 xrsbhy2
@@ -1545,7 +1575,8 @@ echo "=========启用Cloudflared-argo内核========="
 if [ ! -e "$HOME/agsbx/cloudflared" ]; then
 upcore c "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu" Cloudflared || { echo "❌ Cloudflared内核安装失败，已终止（argo 相关协议需要它）"; exit 1; }
 fi
-if [ "$argo" = "vmpt" ]; then argoport=$(cat "$HOME/agsbx/port_vm_ws" 2>/dev/null); echo "Vmess" > "$HOME/agsbx/vlvm"; elif [ "$argo" = "vwpt" ]; then argoport=$(cat "$HOME/agsbx/port_vw" 2>/dev/null); echo "Vless" > "$HOME/agsbx/vlvm"; fi; echo "$argoport" > "$HOME/agsbx/argoport.log"
+cftupr=$([ -n "$agqc" ] && echo 'quic' || echo 'http2'); echo "$cftupr" > "$HOME/agsbx/cftupr.log"
+if [ "$argo" = "vmpt" ]; then argoport=$(cat "$HOME/agsbx/port_vm_ws" 2>/dev/null); echo "Vmess" > "$HOME/agsbx/vlvm"; elif [ "$argo" = "vwpt" ]; then argoport=$(cat "$HOME/agsbx/port_vw" 2>/dev/null); echo "Vless" > "$HOME/agsbx/vlvm"; elif [ "$argo" = "vxpt" ]; then argoport=$(cat "$HOME/agsbx/port_vx" 2>/dev/null); echo "Vlessx" > "$HOME/agsbx/vlvm"; fi; echo "$argoport" > "$HOME/agsbx/argoport.log"
 if [ -n "${ARGO_DOMAIN}" ] && [ -n "${ARGO_AUTH}" ]; then
 argoname='固定'
 # token 走环境变量文件（600），避免出现在 systemd 单元文件与 ps 命令行里
@@ -1573,7 +1604,7 @@ ProtectKernelModules=yes
 RestrictSUIDSGID=yes
 PrivateTmp=yes
 EnvironmentFile=-$argoenvi
-ExecStart=$HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run
+ExecStart=$HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) run
 Restart=always
 RestartSec=5s
 [Install]
@@ -1589,7 +1620,7 @@ cat > /etc/init.d/argo <<EOF
 description="argo service"
 export TUNNEL_TOKEN="${ARGO_AUTH}"
 command="$HOME/agsbx/cloudflared tunnel"
-command_args="--no-autoupdate --edge-ip-version auto --protocol http2 run"
+command_args="--no-autoupdate --edge-ip-version auto --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) run"
 pidfile="/run/argo.pid"
 command_background="yes"
 depend() {
@@ -1600,13 +1631,13 @@ chmod +x /etc/init.d/argo >/dev/null 2>&1
 rc-update add argo default >/dev/null 2>&1
 rc-service argo start >/dev/null 2>&1
 else
-nohup "$HOME/agsbx/cloudflared" tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${ARGO_AUTH}" >/dev/null 2>&1 &
+nohup "$HOME/agsbx/cloudflared" tunnel --no-autoupdate --edge-ip-version auto --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) run --token "${ARGO_AUTH}" >/dev/null 2>&1 &
 fi
 echo "${ARGO_DOMAIN}" > "$HOME/agsbx/sbargoym.log"
 echo "${ARGO_AUTH}" > "$HOME/agsbx/sbargotoken.log"
 else
 argoname='临时'
-nohup "$HOME/agsbx/cloudflared" tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log) --edge-ip-version auto --no-autoupdate --protocol http2 > $HOME/agsbx/argo.log 2>&1 &
+nohup "$HOME/agsbx/cloudflared" tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log) --edge-ip-version auto --no-autoupdate --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) > $HOME/agsbx/argo.log 2>&1 &
 fi
 echo "申请Argo$argoname隧道中……请稍等"
 sleep 15
@@ -1631,7 +1662,7 @@ mkdir -p "$HOME/bin"
 (command -v curl >/dev/null 2>&1 && curl -sL "$agsbxurl" -o "$SCRIPT_PATH") || (command -v wget >/dev/null 2>&1 && wget -qO "$SCRIPT_PATH" "$agsbxurl")
 chmod +x "$SCRIPT_PATH"
 if ! pidof systemd >/dev/null 2>&1 && ! command -v rc-service >/dev/null 2>&1; then
-echo "if ! find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -Eq 'agsbx/(s|x)' && ! pgrep -f 'agsbx/(s|x)' >/dev/null 2>&1; then echo '检测到系统可能中断过，或者变量格式错误？建议在SSH对话框输入 reboot 重启下服务器。现在自动执行Argosbx脚本的节点恢复操作，请稍等……'; sleep 6; export alns=\"${alns}\" cfip=\"${cfip}\" hyjpt=\"${hyjpt}\" cdnym=\"${cdnym}\" name=\"${name}\" ippz=\"${ippz}\" argo=\"${argo}\" uuid=\"${uuid}\" $wap=\"${warp}\" $xhp=\"${port_xh}\" $xup=\"${port_xu}\" $vxp=\"${port_vx}\" $ssp=\"${port_ss}\" $sop=\"${port_so}\" $anp=\"${port_an}\" $arp=\"${port_ar}\" $vlp=\"${port_vl_re}\" $vwp=\"${port_vw}\" $vmp=\"${port_vm_ws}\" $hyp=\"${port_hy2}\" $tup=\"${port_tu}\" $xcp=\"${port_xc}\" $nvp=\"${port_nv}\" reym=\"${ym_vl_re}\" agn=\"${ARGO_DOMAIN}\" agk=\"${ARGO_AUTH}\"; bash "$HOME/bin/agsbx"; fi" >> ~/.bashrc
+echo "if ! find /proc/*/exe -type l 2>/dev/null | grep -E '/proc/[0-9]+/exe' | xargs -r readlink 2>/dev/null | grep -Eq 'agsbx/(s|x)' && ! pgrep -f 'agsbx/(s|x)' >/dev/null 2>&1; then echo '检测到系统可能中断过，或者变量格式错误？建议在SSH对话框输入 reboot 重启下服务器。现在自动执行Argosbx脚本的节点恢复操作，请稍等……'; sleep 6; export agqc=\"${agqc}\" alns=\"${alns}\" cfip=\"${cfip}\" hyjpt=\"${hyjpt}\" cdnym=\"${cdnym}\" name=\"${name}\" ippz=\"${ippz}\" argo=\"${argo}\" uuid=\"${uuid}\" $wap=\"${warp}\" $xhp=\"${port_xh}\" $xup=\"${port_xu}\" $vxp=\"${port_vx}\" $ssp=\"${port_ss}\" $sop=\"${port_so}\" $snp=\"${port_sn}\" $anp=\"${port_an}\" $arp=\"${port_ar}\" $vlp=\"${port_vl_re}\" $vwp=\"${port_vw}\" $vmp=\"${port_vm_ws}\" $hyp=\"${port_hy2}\" $tup=\"${port_tu}\" $xcp=\"${port_xc}\" $nvp=\"${port_nv}\" reym=\"${ym_vl_re}\" agn=\"${ARGO_DOMAIN}\" agk=\"${ARGO_AUTH}\"; bash "$HOME/bin/agsbx"; fi" >> ~/.bashrc
 fi
 sed -i '/export PATH="\$HOME\/bin:\$PATH"/d' ~/.bashrc
 echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.bashrc"
@@ -1652,21 +1683,21 @@ sed -i '/agsbx\/cloudflared/d' /tmp/crontab.tmp
 if [ -n "$argo" ] && [ -n "$vmag" ]; then
 if [ -n "${ARGO_DOMAIN}" ] && [ -n "${ARGO_AUTH}" ]; then
 if ! pidof systemd >/dev/null 2>&1 && ! command -v rc-service >/dev/null 2>&1; then
-echo '@reboot sleep 10 && /bin/sh -c "nohup $HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token $(cat $HOME/agsbx/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 &"' >> /tmp/crontab.tmp
+echo '@reboot sleep 10 && /bin/sh -c "nohup $HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) run --token $(cat $HOME/agsbx/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 &"' >> /tmp/crontab.tmp
 fi
 else
 if command -v apk >/dev/null 2>&1; then
 cat > /etc/local.d/alpineargosbx.start <<EOF
 #!/bin/bash
 sleep 10
-nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:\$(cat $HOME/agsbx/argoport.log) --edge-ip-version auto --no-autoupdate --protocol http2 > $HOME/agsbx/argo.log 2>&1 &
+nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:\$(cat $HOME/agsbx/argoport.log) --edge-ip-version auto --no-autoupdate --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) > $HOME/agsbx/argo.log 2>&1 &
 sleep 10
 HOME="$HOME" $HOME/bin/agsbx list >/dev/null 2>&1
 EOF
 chmod +x /etc/local.d/alpineargosbx.start
 rc-update add local default >/dev/null 2>&1
 else
-echo '@reboot sleep 10 && /bin/bash -c "nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log) --edge-ip-version auto --no-autoupdate --protocol http2 > $HOME/agsbx/argo.log 2>&1 & sleep 10 && bash $HOME/bin/agsbx list >/dev/null 2>&1"' >> /tmp/crontab.tmp
+echo '@reboot sleep 10 && /bin/bash -c "nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log) --edge-ip-version auto --no-autoupdate --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) > $HOME/agsbx/argo.log 2>&1 & sleep 10 && bash $HOME/bin/agsbx list >/dev/null 2>&1"' >> /tmp/crontab.tmp
 fi
 fi
 fi
@@ -1684,7 +1715,7 @@ echo "$cdnip1" > "$HOME/agsbx/cdnip1"
 echo "$cdnip2" > "$HOME/agsbx/cdnip2"
 else
 cdnip1="www.shopify.com"
-cdnip2="www.wto.org"
+cdnip2="icook.tw"
 echo "$cdnip1" > "$HOME/agsbx/cdnip1"
 echo "$cdnip2" > "$HOME/agsbx/cdnip2"
 fi
@@ -1816,6 +1847,32 @@ vl_xh_link="vless://$uuid@$server_ip:$port_xh?encryption=$enkey&flow=xtls-rprx-v
 echo "$vl_xh_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_xh_link"
 echo
+clxhreaencpt(){
+cat <<EOF
+- name: ${sxname}vless-xhttp-reality-enc-$hostname
+  type: vless
+  server: $server_ip
+  port: $port_xh
+  uuid: $uuid
+  udp: true
+  network: xhttp
+  tls: true
+  servername: $ym_vl_re
+  client-fingerprint: chrome
+  flow: xtls-rprx-vision
+  encryption: "$enkey"
+  reality-opts:
+    public-key: $public_key_x
+    short-id: $short_id_x
+    support-x25519mlkem768: true
+  xhttp-opts:
+    path: $uuid-xh
+    mode: auto
+EOF
+}
+clxhreaencpt1(){
+echo "- ${sxname}vless-xhttp-reality-enc-$hostname"
+}
 fi
 if grep vless-xhttp "$HOME/agsbx/xr.json" >/dev/null 2>&1; then
 echo "💣【 Vless-xhttp-enc 】支持ENC加密，节点信息如下："
@@ -1824,9 +1881,29 @@ vl_vx_link="vless://$uuid@$server_ip:$port_vx?encryption=$enkey&flow=xtls-rprx-v
 echo "$vl_vx_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_vx_link"
 echo
+clxhencpt(){
+cat <<EOF
+- name: ${sxname}vless-xhttp-enc-$hostname
+  type: vless
+  server: $server_ip
+  port: $port_vx
+  uuid: $uuid
+  udp: true
+  network: xhttp
+  tls: false
+  flow: xtls-rprx-vision
+  encryption: "$enkey"
+  xhttp-opts:
+    path: $uuid-vx
+    mode: auto
+EOF
+}
+clxhencpt1(){
+echo "- ${sxname}vless-xhttp-enc-$hostname"
+}
 if [ -f "$HOME/agsbx/cdnym" ]; then
 echo "💣【 Vless-xhttp-ecn-cdn 】支持ENC加密，节点信息如下："
-echo "可自行更换优选IP域名，如是回源端口需手动修改443或者80系端口"
+echo "可自行更换优选IP域名，如是回源端口需手动修改443或者80系端口(无订阅节点)"
 vl_vx_cdn_link="vless://$uuid@$cdnip1:$port_vx?encryption=$enkey&flow=xtls-rprx-vision&type=xhttp&host=$xvvmcdnym&path=$uuid-vx&mode=auto#${sxname}vl-xhttp-enc-cdn-$hostname"
 echo "$vl_vx_cdn_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_vx_cdn_link"
@@ -1840,16 +1917,34 @@ vl_vw_link="vless://$uuid@$server_ip:$port_vw?encryption=$enkey&flow=xtls-rprx-v
 echo "$vl_vw_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_vw_link"
 echo
+clwsencpt(){
+cat <<EOF
+- name: ${sxname}vless-ws-enc-$hostname
+  type: vless
+  server: $server_ip
+  port: $port_vw
+  uuid: $uuid
+  udp: true
+  tls: false
+  network: ws
+  flow: xtls-rprx-vision
+  encryption: "$enkey"
+  ws-opts:
+    path: $uuid-vw
+EOF
+}
+clwsencpt1(){
+echo "- ${sxname}vless-ws-enc-$hostname"
+}
 if [ -f "$HOME/agsbx/cdnym" ]; then
 echo "💣【 Vless-ws-enc-cdn 】支持ENC加密，节点信息如下："
-echo "可自行更换优选IP域名，如是回源端口需手动修改443或者80系端口"
+echo "可自行更换优选IP域名，如是回源端口需手动修改443或者80系端口(无订阅节点)"
 vl_vw_cdn_link="vless://$uuid@$cdnip1:$port_vw?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$xvvmcdnym&path=$uuid-vw#${sxname}vl-ws-enc-cdn-$hostname"
 echo "$vl_vw_cdn_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_vw_cdn_link"
 echo
 fi
 fi
-
 if grep xhttp-h23 "$HOME/agsbx/xr.json" >/dev/null 2>&1; then
 port_xc=$(cat "$HOME/agsbx/port_xc")
 xhttpclmh(){
@@ -1992,43 +2087,15 @@ echo "- ${sxname}Xhttp-UDP-$hostname"
 }
 fi
 if grep reality-vision "$HOME/agsbx/xr.json" >/dev/null 2>&1; then
-echo "💣【 Vless-tcp-reality-vision 】节点信息如下："
+echo "💣【 Vless-tcp-reality-enc 】节点信息如下："
 port_vl_re=$(cat "$HOME/agsbx/port_vl_re")
-vl_link="vless://$uuid@$server_ip:$port_vl_re?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$ym_vl_re&fp=chrome&pbk=$public_key_x&sid=$short_id_x&type=tcp&headerType=none#${sxname}vl-reality-vision-$hostname"
+vl_link="vless://$uuid@$server_ip:$port_vl_re?encryption=$enkey&flow=xtls-rprx-vision&security=reality&sni=$ym_vl_re&fp=chrome&pbk=$public_key_x&sid=$short_id_x&type=tcp&headerType=none#${sxname}vl-reality-enc-$hostname"
 echo "$vl_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vl_link"
 echo
-sbvlpt(){
-cat <<EOF
-    {
-      "type": "vless",
-      "tag": "${sxname}vless-$hostname",
-      "server": "$server_ip",
-      "server_port": $port_vl_re,
-      "uuid": "$uuid",
-      "flow": "xtls-rprx-vision",
-      "tls": {
-        "enabled": true,
-        "server_name": "$ym_vl_re",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-      "reality": {
-          "enabled": true,
-          "public_key": "$public_key_x",
-          "short_id": "$short_id_x"
-        }
-      }
-    },
-EOF
-}
-sbvlpt1(){
-echo "\"${sxname}vless-$hostname\","
-}
 clvlpt(){
 cat <<EOF
-- name: ${sxname}vless-reality-vision-$hostname               
+- name: ${sxname}vless-reality-enc-$hostname               
   type: vless
   server: $server_ip                          
   port: $port_vl_re                                
@@ -2037,15 +2104,17 @@ cat <<EOF
   udp: true
   tls: true
   flow: xtls-rprx-vision
+  encryption: "$enkey"
   servername: $ym_vl_re                 
   reality-opts: 
     public-key: $public_key_x    
-    short-id: $short_id_x                      
+    short-id: $short_id_x
+    support-x25519mlkem768: true
   client-fingerprint: chrome
 EOF
 }
 clvlpt1(){
-echo "- ${sxname}vless-reality-vision-$hostname"
+echo "- ${sxname}vless-reality-enc-$hostname"
 }
 fi
 if grep ss-2022 "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
@@ -2076,7 +2145,7 @@ echo "\"${sxname}Shadowsocks-2022-$hostname\","
 }
 clsspt(){
 cat <<EOF
-- name: "${sxname}Shadowsocks-2022-$hostname"
+- name: ${sxname}Shadowsocks-2022-$hostname
   type: ss
   server: $server_ip
   port: $port_ss
@@ -2089,6 +2158,59 @@ EOF
 }
 clsspt1(){
 echo "- ${sxname}Shadowsocks-2022-$hostname"
+}
+fi
+if grep snellv "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
+echo "💣【 Snell-V6 】节点信息如下："
+port_sn=$(cat "$HOME/agsbx/port_sn")
+sn1_link="snell://$uuid@$server_ip:$port_sn?version=6&reuse=true&mode=default#${sxname}Snell-V6-$hostname"
+sn2_link="snell://$(echo -n "chacha20-ietf-poly1305:$uuid@$server_ip:$port_sn" | base64 -w0)?tfo=1&version=6&reuse=1&mode=default&udp=1#${sxname}Snell-V6-$hostname"
+echo "$sn1_link" >> "$HOME/agsbx/jhsub.txt"
+echo "$sn2_link" >> "$HOME/agsbx/jhsub.txt"
+echo "Snell-V6必要参数仅三个，可手动填写至客户端"
+echo "客户端地址：$server_ip"
+echo "客户端端口：$port_sn"
+echo "客户端密码：$uuid"
+echo "版本号选择：6"
+echo
+echo "NekoboxF单节点分享："
+echo "$sn1_link"
+echo
+echo "Shadowrocket小火箭单节点分享："
+echo "$sn2_link"
+echo
+sbsnpt(){
+cat <<EOF
+{
+  "type": "snell",
+  "tag": "${sxname}Snell-V6-$hostname",
+  "server": "$server_ip",
+  "server_port": $port_sn,
+  "version": 6,
+  "psk": "$uuid",
+  "mode": "default",
+  "reuse": true
+     },
+EOF
+}
+sbsnpt1(){
+echo "\"${sxname}Snell-V6-$hostname\","
+}
+clsnpt(){
+cat <<EOF
+- name: ${sxname}Snell-V6-$hostname
+  type: snell
+  server: $server_ip
+  port: $port_sn
+  psk: "$uuid"
+  version: 6
+  mode: default
+  udp: true
+  reuse: true
+EOF
+}
+clsnpt1(){
+echo "- ${sxname}Snell-V6-$hostname"
 }
 fi
 if grep vmess-xr "$HOME/agsbx/xr.json" >/dev/null 2>&1 || grep vmess-sb "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
@@ -2484,6 +2606,12 @@ argodomain=$(cat "$HOME/agsbx/sbargoym.log" 2>/dev/null)
 [ -z "$argodomain" ] && argodomain=$(grep -a trycloudflare.com "$HOME/agsbx/argo.log" 2>/dev/null | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')
 if [ -n "$argodomain" ]; then
 vlvm=$(cat "$HOME/agsbx/vlvm" 2>/dev/null)
+if grep -q "quic" "$HOME/agsbx/cftupr.log" 2>/dev/null; then tu="(UDP)"; else tu="(TCP)"; fi
+case "$vlvm" in
+Vmess) vlvmvx='Vmess-ws' ;;
+Vlessx) vlvmvx='Vless-xhttp' ;;
+*) vlvmvx='Vless-ws' ;;
+esac
 if [ -z "$vlvm" ]; then
 if grep -qs '"tag": *"vmess-' "$HOME/agsbx/xr.json" "$HOME/agsbx/sb.json" 2>/dev/null; then vlvm=Vmess
 elif grep -qs '"tag": *"vless-ws' "$HOME/agsbx/xr.json" "$HOME/agsbx/sb.json" 2>/dev/null; then vlvm=Vless
@@ -2521,8 +2649,8 @@ case "$_ap" in
 *) _atls=tls; _asni=$argodomain ;;
 esac
 case "$_seen" in
-*" $_ap "*) _aname="${sxname}vmess-ws-tls-argo-$hostname-$_ap-$_agn" ;;
-*) _aname="${sxname}vmess-ws-tls-argo-$hostname-$_ap" ;;
+*" $_ap "*) _aname="${sxname}vmess-ws-tls-argo${tu}-$hostname-$_ap-$_agn" ;;
+*) _aname="${sxname}vmess-ws-tls-argo${tu}-$hostname-$_ap" ;;
 esac
 _seen="$_seen$_ap "
 _alink="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"$_aname\", \"add\": \"$_aip\", \"port\": \"$_ap\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$uuid-vm\", \"tls\": \"$_atls\", \"sni\": \"$_asni\", \"alpn\": \"\", \"fp\": \"chrome\"}" | base64 -w0)"
@@ -2535,7 +2663,7 @@ cat <<EOF
 {
             "server": "$agip1",
             "server_port": 443,
-            "tag": "${sxname}vmess-ws-tls-argo-$hostname-443",
+            "tag": "${sxname}vmess-ws-tls-argo${tu}-$hostname-443",
             "tls": {
                 "enabled": true,
                 "server_name": "$argodomain",
@@ -2561,7 +2689,7 @@ cat <<EOF
 {
             "server": "$agip2",
             "server_port": 8443,
-            "tag": "${sxname}vmess-ws-tls-argo-$hostname-8443",
+            "tag": "${sxname}vmess-ws-tls-argo${tu}-$hostname-8443",
             "tls": {
                 "enabled": true,
                 "server_name": "$argodomain",
@@ -2587,12 +2715,12 @@ cat <<EOF
 EOF
 }
 sbvmargopt1(){
-echo "\"${sxname}vmess-ws-tls-argo-$hostname-443\","
-echo "\"${sxname}vmess-ws-tls-argo-$hostname-8443\","
+echo "\"${sxname}vmess-ws-tls-argo${tu}-$hostname-443\","
+echo "\"${sxname}vmess-ws-tls-argo${tu}-$hostname-8443\","
 }
 clvmargopt(){
 cat <<EOF
-- name: ${sxname}vmess-ws-tls-argo-$hostname-443                         
+- name: ${sxname}vmess-ws-tls-argo${tu}-$hostname-443                         
   type: vmess
   server: "$agip1"                       
   port: 443                                     
@@ -2607,7 +2735,7 @@ cat <<EOF
     path: "$uuid-vm"                             
     headers:
       Host: $argodomain
-- name: ${sxname}vmess-ws-tls-argo-$hostname-8443                         
+- name: ${sxname}vmess-ws-tls-argo${tu}-$hostname-8443
   type: vmess
   server: "$agip2"                        
   port: 8443                                     
@@ -2625,33 +2753,112 @@ cat <<EOF
 EOF
 }
 clvmargopt1(){
-echo "- ${sxname}vmess-ws-tls-argo-$hostname-443"
-echo "- ${sxname}vmess-ws-tls-argo-$hostname-8443"
+echo "- ${sxname}vmess-ws-tls-argo${tu}-$hostname-443"
+echo "- ${sxname}vmess-ws-tls-argo${tu}-$hostname-8443"
 }
 elif [ "$vlvm" = "Vless" ]; then
-vwatls_link1="vless://$uuid@$agip1:443?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=tls&sni=$argodomain&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-ws-tls-argo-enc-vision-$hostname"
+vwatls_link1="vless://$uuid@$agip1:443?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=tls&sni=$argodomain&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-ws-tls-argo${tu}-enc-vision-$hostname"
 echo "$vwatls_link1" >> "$HOME/agsbx/jhsub.txt"
-vwa_link2="vless://$uuid@$agip3:80?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=none#${sxname}vless-ws-argo-enc-vision-$hostname"
+vwa_link2="vless://$uuid@$agip3:80?encryption=$enkey&flow=xtls-rprx-vision&type=ws&host=$argodomain&path=$uuid-vw&security=none#${sxname}vless-ws-argo${tu}-enc-vision-$hostname"
 echo "$vwa_link2" >> "$HOME/agsbx/jhsub.txt"
+clvlwsargoencpt(){
+cat <<EOF
+- name: ${sxname}vless-ws-tls-argo${tu}-enc-vision-$hostname-443
+  type: vless
+  server: "$agip1"
+  port: 443
+  uuid: "$uuid"
+  encryption: "$enkey"
+  flow: xtls-rprx-vision
+  udp: true
+  tls: true
+  servername: "$argodomain"
+  skip-cert-verify: false
+  network: ws
+  ws-opts:
+    path: "$uuid-vw"
+    headers:
+      Host: "$argodomain"
+- name: ${sxname}vless-ws-argo${tu}-enc-vision-$hostname-80
+  type: vless
+  server: "$agip3"
+  port: 80
+  uuid: "$uuid"
+  encryption: "$enkey"
+  flow: xtls-rprx-vision
+  udp: true
+  network: ws
+  ws-opts:
+    path: "$uuid-vw"
+    headers:
+      Host: "$argodomain"
+EOF
+}
+clvlwsargoencpt1(){
+echo "- ${sxname}vless-ws-tls-argo${tu}-enc-vision-$hostname-443"
+echo "- ${sxname}vless-ws-argo${tu}-enc-vision-$hostname-80"
+}
+elif [ "$vlvm" = "Vlessx" ]; then
+vlvmvx='Vless-xhttp'
+vwatls_link1="vless://$uuid@$agip1:443?encryption=$enkey&flow=xtls-rprx-vision&type=xhttp&host=$argodomain&path=$uuid-vx&security=tls&sni=$argodomain&mode=auto&fp=chrome&insecure=0&allowInsecure=0#${sxname}vless-xhttp-tls-argo${tu}-enc-vision-$hostname"
+echo "$vwatls_link1" >> "$HOME/agsbx/jhsub.txt"
+vwa_link2="vless://$uuid@$agip3:80?encryption=$enkey&flow=xtls-rprx-vision&type=xhttp&host=$argodomain&mode=auto&path=$uuid-vx&security=none#${sxname}vless-xhttp-argo${tu}-enc-vision-$hostname"
+echo "$vwa_link2" >> "$HOME/agsbx/jhsub.txt"
+clvlxhargoencpt(){
+cat <<EOF
+- name: ${sxname}vless-xhttp-tls-argo${tu}-enc-vision-$hostname-443
+  type: vless
+  server: "$agip1"
+  port: 443
+  uuid: "$uuid"
+  encryption: "$enkey"
+  flow: xtls-rprx-vision
+  udp: true
+  tls: true
+  servername: "$argodomain"
+  skip-cert-verify: false
+  network: xhttp
+  xhttp-opts:
+    path: "$uuid-vx"
+    host: "$argodomain"
+    mode: auto
+- name: ${sxname}vless-xhttp-argo${tu}-enc-vision-$hostname-80
+  type: vless
+  server: "$agip3"
+  port: 80
+  uuid: "$uuid"
+  encryption: "$enkey"
+  flow: xtls-rprx-vision
+  udp: true
+  network: xhttp
+  xhttp-opts:
+    path: "$uuid-vx"
+    host: "$argodomain"
+    mode: auto
+EOF
+}
+clvlxhargoencpt1(){
+echo "- ${sxname}vless-xhttp-tls-argo${tu}-enc-vision-$hostname-443"
+echo "- ${sxname}vless-xhttp-argo${tu}-enc-vision-$hostname-80"
+}
 fi
 sbtk=$(cat "$HOME/agsbx/sbargotoken.log" 2>/dev/null)
 if [ -n "$sbtk" ]; then
 nametn="Argo固定隧道token：$sbtk"
 fi
 argoshow=$(
-echo "Argo隧道端口正在使用$vlvm-ws主协议端口：$(cat $HOME/agsbx/argoport.log 2>/dev/null)
+echo "Argo隧道端口正在使用$vlvmvx主协议端口：$(cat $HOME/agsbx/argoport.log 2>/dev/null)
 Argo域名：$argodomain
 $nametn
 
-1、💣443端口的$vlvm-ws-tls-argo节点(优选IP与443系端口随便换)
+1、💣443端口的$vlvmvx-tls-argo节点(优选IP与443系端口随便换)
 ${vmatls_link1}${vwatls_link1}
 
-2、💣8443端口的$vlvm-ws-tls-argo节点(优选IP与TLS端口随便换；如需80系端口用 aghttp=yes 重新 list)
+2、💣8443端口的$vlvmvx-tls-argo节点(优选IP与TLS端口随便换；如需80系端口用 aghttp=yes 重新 list)
 ${vma_link7}${vwa_link2}
 "
 )
 fi
-
 get_func() {
 local f=$1
 if type "$f" >/dev/null 2>&1; then
@@ -2660,10 +2867,10 @@ out=$($f)
 [ -n "$out" ] && printf "%s\n" "$out"
 fi
 }
-sbxy="$(get_func sbvlpt; get_func sbsspt; get_func sbanpt; get_func sbarpt; get_func sbvmpt; get_func sbhypt; get_func sbtupt; get_func sbnvpt; get_func sbvmargopt)"
-clxy="$(get_func cludpxcpt; get_func clxcpt; get_func clvlpt; get_func clsspt; get_func clanpt; get_func clvmpt; get_func clhypt; get_func cltupt; get_func clvmargopt)"
-sbgz="$(get_func sbvlpt1; get_func sbsspt1; get_func sbanpt1; get_func sbarpt1; get_func sbvmpt1; get_func sbhypt1; get_func sbtupt1; get_func sbnvpt1; get_func sbvmargopt1)"
-clgz="$({ get_func cludpxcpt1; get_func clxcpt1; get_func clvlpt1; get_func clsspt1; get_func clanpt1; get_func clvmpt1; get_func clhypt1; get_func cltupt1; get_func clvmargopt1; } | sed '2,$s/^/    /')"
+sbxy="$(get_func sbsnpt; get_func sbsspt; get_func sbanpt; get_func sbarpt; get_func sbvmpt; get_func sbhypt; get_func sbtupt; get_func sbnvpt; get_func sbvmargopt)"
+clxy="$(get_func clsnpt; get_func clvlwsargoencpt; get_func clvlxhargoencpt; get_func clwsencpt; get_func clxhencpt; get_func clxhreaencpt; get_func cludpxcpt; get_func clxcpt; get_func clvlpt; get_func clsspt; get_func clanpt; get_func clvmpt; get_func clhypt; get_func cltupt; get_func clvmargopt)"
+sbgz="$(get_func sbsnpt1; get_func sbsspt1; get_func sbanpt1; get_func sbarpt1; get_func sbvmpt1; get_func sbhypt1; get_func sbtupt1; get_func sbnvpt1; get_func sbvmargopt1)"
+clgz="$({ get_func clsnpt1; get_func clvlwsargoencpt1; get_func clvlxhargoencpt1; get_func clwsencpt1; get_func clxhencpt1; get_func clxhreaencpt1; get_func cludpxcpt1; get_func clxcpt1; get_func clvlpt1; get_func clsspt1; get_func clanpt1; get_func clvmpt1; get_func clhypt1; get_func cltupt1; get_func clvmargopt1; } | sed '2,$s/^/    /')"
 sbgz=$(printf "%s\n" "$sbgz" | sed '$ s/,$//')
 cat > $HOME/agsbx/sbox.json <<EOF
 {
@@ -3087,10 +3294,10 @@ systemctl restart argo >/dev/null 2>&1
 elif command -v rc-service >/dev/null 2>&1; then
 rc-service argo restart >/dev/null 2>&1
 else
-nohup $HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token $(cat $HOME/agsbx/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 &
+nohup $HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) run --token $(cat $HOME/agsbx/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 &
 fi
 else
-nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log 2>/dev/null) --edge-ip-version auto --no-autoupdate --protocol http2 > $HOME/agsbx/argo.log 2>&1 &
+nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log 2>/dev/null) --edge-ip-version auto --no-autoupdate --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) > $HOME/agsbx/argo.log 2>&1 &
 fi
 echo "Cloudflared-argo内核更新完成，当前版本：v$(corever "$HOME/agsbx/cloudflared" c)" && sleep 2 && cip
 exit
@@ -3116,10 +3323,10 @@ systemctl restart argo >/dev/null 2>&1
 elif command -v rc-service >/dev/null 2>&1; then
 rc-service argo restart >/dev/null 2>&1
 else
-nohup $HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token $(cat $HOME/agsbx/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 &
+nohup $HOME/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) run --token $(cat $HOME/agsbx/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 &
 fi
 else
-nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log 2>/dev/null) --edge-ip-version auto --no-autoupdate --protocol http2 > $HOME/agsbx/argo.log 2>&1 &
+nohup $HOME/agsbx/cloudflared tunnel --url http://localhost:$(cat $HOME/agsbx/argoport.log 2>/dev/null) --edge-ip-version auto --no-autoupdate --protocol $(cat $HOME/agsbx/cftupr.log 2>/dev/null) > $HOME/agsbx/argo.log 2>&1 &
 fi
 ;;
 esac
